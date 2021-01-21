@@ -1,15 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"github.com/joho/godotenv"
-	"ioc-provider/crawler"
 	"ioc-provider/db"
+	"ioc-provider/helper"
 	"ioc-provider/repository"
-	"ioc-provider/repository/repo_impl"
 	"log"
 	"os"
-	"time"
 )
 
 type IocHandler struct {
@@ -28,21 +25,34 @@ func main() {
 	esPort := os.Getenv("ES_PORT")
 
 	// connect elastic
-	client := &db.ElasticDB{
+	clientES := &db.ElasticDB{
 		Host: esHost,
 		Port: esPort,
 	}
-	client.NewElasticDB()
+	clientES.NewElasticDB()
 
-	iocHandler := IocHandler{
-		IocRepo: repo_impl.NewIocRepo(client),
+	rbmqHost := os.Getenv("RBMQ_HOST")
+	rbmqPort := os.Getenv("RBMQ_PORT")
+	rbmqUserName := os.Getenv("RBMQ_USER_NAME")
+	rbmqPassword := os.Getenv("RBMQ_PASSWORD")
+
+	clientRB := &helper.Rbmq{
+		UserName: rbmqUserName,
+		Password: rbmqPassword,
+		Host: rbmqHost,
+		Port: rbmqPort,
+	}
+	clientRB.ConnectRbmq()
+
+	/*iocHandler := IocHandler{
+		IocRepo: repo_impl.NewIocRepo(clientES),
 	}
 
 	// time start crawler
-	go scheduleUpdate(60*time.Second, iocHandler)
+	go scheduleUpdate(60*time.Second, iocHandler)*/
 }
 
-func scheduleUpdate(timeSchedule time.Duration, handler IocHandler) {
+/*func scheduleUpdate(timeSchedule time.Duration, handler IocHandler) {
 	ticker := time.NewTicker(timeSchedule)
 	go func() {
 		for {
@@ -54,4 +64,4 @@ func scheduleUpdate(timeSchedule time.Duration, handler IocHandler) {
 			}
 		}
 	}()
-}
+}*/
