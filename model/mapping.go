@@ -1,7 +1,10 @@
 package model
 
 const (
-	AppName       = "es01"
+	IndexNameSample       = "sample"
+	IndexNameIndicator       = "indicator"
+	IndexNamePost       = "post"
+	IndexNameCompromised       = "compromised"
 	MappingSample = `
 	{
 		"settings":{
@@ -65,7 +68,7 @@ const (
 					"type":"text"
 				},
 				"created_time":{
-					"type":"date"
+					"type":"text"
 				},
 				"crawled_time":{
 					"type":"date"
@@ -106,6 +109,21 @@ const (
 				"created":{
 					"type":"date"
 				},
+                "revision":{
+					"type":"integer"
+				},
+				"tlp":{
+					"type":"text
+				},
+				"public":{
+					"type":"integer"
+				},
+                "adversary":{
+					"type":"text"
+				},
+				"tags":{
+					"type":"text"
+				},
 				"targeted_countries":{
 					"type":"text"
 				},
@@ -119,9 +137,6 @@ const (
 					"type":"text"
 				},
 				"references":{
-					"type":"text"
-				},
-				"category":{
 					"type":"text"
 				}
 			}

@@ -3,9 +3,7 @@ package repo_impl
 import (
 	"context"
 	"errors"
-	"github.com/olivere/elastic/v7"
 	"ioc-provider/db"
-	"ioc-provider/model"
 	"ioc-provider/repository"
 	"log"
 )
@@ -20,14 +18,14 @@ func NewIocRepo(es *db.ElasticDB) repository.IocRepo {
 	}
 }
 
-func (ioc IocRepoImpl) CreateIndex(index string, mapping string) error {
+func (ioc IocRepoImpl) CreateIndex(indexName, mapping string) error {
 	ctx := context.Background()
-	exists, err := ioc.es.Client.IndexExists(index).Do(ctx)
+	exists, err := ioc.es.Client.IndexExists(indexName).Do(ctx)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		createIndex, err := ioc.es.Client.CreateIndex(index).
+		createIndex, err := ioc.es.Client.CreateIndex(indexName).
 			BodyString(mapping).
 			Do(ctx)
 		if err != nil {
@@ -40,12 +38,12 @@ func (ioc IocRepoImpl) CreateIndex(index string, mapping string) error {
 	return nil
 }
 
-func (ioc IocRepoImpl) Index(index string, id string, doc interface{}) error {
+func (ioc IocRepoImpl) InsertIndex(indexName string, id string, record interface{}) error {
 	ctx := context.Background()
 	_, err := ioc.es.Client.Index().
-		Index(index).
+		Index(indexName).
 		Id(id).
-		BodyJson(doc).
+		BodyJson(record).
 		Do(ctx)
 	if err != nil {
 		log.Println(err)
@@ -53,15 +51,3 @@ func (ioc IocRepoImpl) Index(index string, id string, doc interface{}) error {
 	return nil
 }
 
-func (ioc IocRepoImpl) SearchIndex(index string, search string) error {
-	ctx := context.Background()
-	matchQuery := elastic.NewMatchQuery(model.AppName, search)
-	_, err := ioc.es.Client.Search(index).
-		Index(index).
-		Query(matchQuery).
-		Do(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}

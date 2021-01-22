@@ -6,35 +6,49 @@ import (
 	"ioc-provider/helper"
 	"ioc-provider/model"
 	"ioc-provider/repository"
+	"log"
 	"math"
+	"runtime"
+	"strconv"
 )
 
-type OtxResult struct {
-	Results []struct {
-		PulseID           string   `json:"id"`
-		Name              string   `json:"name"`
-		Description       string   `json:"description"`
-		AuthorName        string   `json:"author_name"`
-		Modified          string   `json:"modified"`
-		Created           string   `json:"created"`
-		Tags              []string `json:"tags"`
-		TargetedCountries []string `json:"targeted_countries"`
-		Industries        []string `json:"industries"`
-		MalwareFamilies   []string `json:"malware_families"`
-		AttackIds         []string `json:"attack_ids"`
-		References        string   `json:"references"`
-		Indicators        []struct {
-			IocID   string `json:"id"`
-			Ioc     string `json:"indicator"`
-			IocType string `json:"type"`
-			Created string `json:"created"`
-		} `json:"indicators"`
-	} `json:"results"`
-	Count int64 `json:"count"`
+type Data struct {
+	Results []Results `json:"results"`
+	Count int `json:"count"`
+}
+
+type Results struct {
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Description string `json:"description"`
+	AuthorName string `json:"author_name"`
+	Modified string `json:"modified"`
+	Created string `json:"created"`
+	Revision int `json:"revision"`
+	Tlp string `json:"tlp"`
+	Public int `json:"public"`
+	Adversary string `json:"adversary"`
+	Indicators []Indicators `json:"indicators"`
+	Tags []string `json:"tags"`
+	TargetedCountries []string `json:"targeted_countries"`
+	MalwareFamilies []string `json:"malware_families"`
+	AttackIds []string `json:"attack_ids"`
+	References []string `json:"references"`
+	Industries []string `json:"industries"`
+}
+
+type Indicators struct {
+	ID int64 `json:"id"`
+	Indicator string `json:"indicator"`
+	Type string `json:"type"`
+	Created string `json:"created"`
 }
 
 func Subscribed(repo repository.IocRepo) {
-	//fmt.Println("Subscribed")
+	queue := helper.NewJobQueue(runtime.NumCPU())
+	queue.Start()
+	defer queue.Stop()
+
 	postList := make([]model.Post, 0)
 	iocList := make([]model.Indicator, 0)
 	totalPage := TotalPageOtx()
@@ -45,34 +59,43 @@ func Subscribed(repo repository.IocRepo) {
 		if err != nil {
 			return
 		}
-		var or OtxResult
-		json.Unmarshal(body, &or)
+		var data Data
+		json.Unmarshal(body, &data)
 
-		for _, item := range or.Results {
+		for _, item := range data.Results {
 			post := model.Post{
-				PulseID:           item.PulseID,
+				PulseID:           item.ID,
 				Name:              item.Name,
 				Description:       item.Description,
 				AuthorName:        item.AuthorName,
 				Modified:          item.Modified,
 				Created:           item.Created,
+				Revision:          item.Revision,
+				Tlp: 			   item.Tlp,
+				Public:            item.Public,
+				Adversary:         item.Adversary,
+				Tags:              item.Tags,
 				TargetedCountries: item.TargetedCountries,
 				Industries:        item.Industries,
 				MalwareFamilies:   item.MalwareFamilies,
 				AttackIds:         item.AttackIds,
 				References:        item.References,
-				Category:          item.Tags,
 			}
 			postList = append(postList, post)
 			fmt.Println("post->", post)
-			/*repo.CreateIndex("post", model.MappingPost)
-			repo.Index("ioc", post.PulseID, post)*/
+
+			for _, post := range postList {
+				queue.Submit(&SubscribedProcess{
+					post:    post,
+					iocRepo: repo,
+				})
+			}
 
 			for _, value := range item.Indicators {
-				var indicator = model.Indicator{
-					IocID:       value.IocID,
-					Ioc:         value.Ioc,
-					IocType:     value.IocType,
+				indicator := model.Indicator{
+					IocID:       strconv.FormatInt(value.ID, 10),
+					Ioc:         value.Indicator,
+					IocType:     value.Type,
 					CreatedTime: value.Created,
 					CrawledTime: "",
 					Source:      "otx",
@@ -80,31 +103,19 @@ func Subscribed(repo repository.IocRepo) {
 				}
 				iocList = append(iocList, indicator)
 				fmt.Println("indicator->", indicator)
-				/*repo.CreateIndex("ioc", model.MappingSample)
-				repo.Index("ioc", indicator.IocID, indicator)*/
+
+				for _, ioc := range iocList {
+					queue.Submit(&SubscribedProcess{
+						indicator: ioc,
+						iocRepo:   repo,
+					})
+				}
 			}
 
 		}
 	}
 	fmt.Println("len postList->", len(postList))
 	fmt.Println("len iocList->", len(iocList))
-
-	/*queue := helper.NewJobQueue(runtime.NumCPU())
-	queue.Start()
-	defer queue.Stop()
-	for _, ioc := range ioc_list {
-		queue.Submit(&SubscribedProcess{
-			indicator: ioc,
-			iocRepo:   repo,
-		})
-	}
-
-	for _, post := range post_list {
-		queue.Submit(&SubscribedProcess{
-			post:    post,
-			iocRepo: repo,
-		})
-	}*/
 }
 
 func TotalPageOtx() int {
@@ -114,28 +125,32 @@ func TotalPageOtx() int {
 	if err != nil {
 		return 0
 	}
-	var otxResult OtxResult
-	json.Unmarshal(body, &otxResult)
-	countPost := otxResult.Count
+	var data Data
+	json.Unmarshal(body, &data)
+	countPost := data.Count
 	totalPage := math.Ceil(float64(countPost) / float64(50))
 	fmt.Println("totalPage->", int(totalPage))
 	return int(totalPage)
 }
 
-/*type SubscribedProcess struct {
+type SubscribedProcess struct {
 	indicator model.Indicator
 	post      model.Post
 	iocRepo   repository.IocRepo
 }
 
 func (process *SubscribedProcess) Process() {
-    err := process.iocRepo.SearchIndex("ioc", process.indicator.IocID)
-    if err != nil {
-    	fmt.Println("Add: ", process.indicator.IocID)
-    	err := process.iocRepo.Index("ioc", process.indicator.IocID, process.indicator)
-    	if err != nil {
-    		log.Println(err)
-		}
-		return
+	fmt.Println("Save indicator: ", process.indicator.IocID)
+	process.iocRepo.CreateIndex(model.IndexNameIndicator, model.MappingIndicator)
+	errSaveIndicator := process.iocRepo.InsertIndex(model.IndexNameIndicator, process.indicator.IocID, process.indicator)
+	if errSaveIndicator != nil {
+		log.Println(errSaveIndicator)
 	}
-}*/
+
+	fmt.Println("Save post: ", process.post.PulseID)
+	process.iocRepo.CreateIndex(model.IndexNamePost, model.MappingPost)
+	errSavePost := process.iocRepo.InsertIndex(model.IndexNamePost, process.post.PulseID, process.post)
+	if errSavePost != nil {
+		log.Println(errSavePost)
+	}
+}
