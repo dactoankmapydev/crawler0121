@@ -65,6 +65,8 @@ func Subscribed(repo repository.IocRepo) {
 			}
 			post_list = append(post_list, post)
 			fmt.Println("post->", post)
+			repo.CreateIndex("post", model.MappingPost)
+			repo.Index("ioc", post.PulseID, post)
 
 			for _, value := range item.Indicators {
 				var indicator = model.Indicator{
@@ -78,6 +80,8 @@ func Subscribed(repo repository.IocRepo) {
 				}
 				ioc_list = append(ioc_list, indicator)
 				fmt.Println("indicator->", indicator)
+				repo.CreateIndex("ioc", model.MappingSample)
+				repo.Index("ioc", indicator.IocID, indicator)
 			}
 
 		}
