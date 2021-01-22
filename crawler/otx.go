@@ -6,6 +6,7 @@ import (
 	"ioc-provider/helper"
 	"ioc-provider/model"
 	"ioc-provider/repository"
+	"log"
 	"math"
 	"runtime"
 )
@@ -64,9 +65,9 @@ func Subscribed(repo repository.IocRepo) {
 				Category:          item.Tags,
 			}
 			post_list = append(post_list, post)
-			fmt.Println("post->", post)
+			/*fmt.Println("post->", post)
 			repo.CreateIndex("post", model.MappingPost)
-			repo.Index("ioc", post.PulseID, post)
+			repo.Index("ioc", post.PulseID, post)*/
 
 			for _, value := range item.Indicators {
 				var indicator = model.Indicator{
@@ -79,7 +80,7 @@ func Subscribed(repo repository.IocRepo) {
 					Category:    item.Tags,
 				}
 				ioc_list = append(ioc_list, indicator)
-				fmt.Println("indicator->", indicator)
+				//fmt.Println("indicator->", indicator)
 				repo.CreateIndex("ioc", model.MappingSample)
 				repo.Index("ioc", indicator.IocID, indicator)
 			}
@@ -129,5 +130,13 @@ type SubscribedProcess struct {
 }
 
 func (process *SubscribedProcess) Process() {
-
+    err := process.iocRepo.SearchIndex("ioc", process.indicator.IocID)
+    if err != nil {
+    	fmt.Println("Add: ", process.indicator.IocID)
+    	err := process.iocRepo.Index("ioc", process.indicator.IocID, process.indicator)
+    	if err != nil {
+    		log.Println(err)
+		}
+		return
+	}
 }
