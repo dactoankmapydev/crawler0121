@@ -65,6 +65,8 @@ func LiveHunting(repo repository.IocRepo) {
 					}
 					sample_list = append(sample_list, sample)
 					fmt.Println("sample->", sample)
+					repo.CreateIndex("sample", model.MappingSample)
+					repo.Index("ioc", sample.Sha256, sample)
 				}
 			}
 		} else {
