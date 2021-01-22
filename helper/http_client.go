@@ -27,7 +27,7 @@ func RequestProxy() {
 }
 
 func (c HTTPClient) GetRequestVirustotal(api string) ([]byte, error) {
-	//RequestProxy()
+	RequestProxy()
 	req, _ := http.NewRequest("GET", api, nil)
 	req.Header.Set("X-Apikey", os.Getenv("VIRUS_TOTAL_API_KEY"))
 	client := &http.Client{}
@@ -47,7 +47,7 @@ func (c HTTPClient) GetRequestVirustotal(api string) ([]byte, error) {
 }
 
 func (c HTTPClient) GetRequestOtx(api string) ([]byte, error) {
-	//RequestProxy()
+	RequestProxy()
 	req, _ := http.NewRequest("GET", api, nil)
 	req.Header.Set("X-OTX-API-KEY", os.Getenv("OTX_API_KEY"))
 	client := &http.Client{}
@@ -66,7 +66,7 @@ func (c HTTPClient) GetRequestOtx(api string) ([]byte, error) {
 }
 
 func (c HTTPClient) GetRequestMirrorH(pathURL string) ([]byte, error) {
-	//RequestProxy()
+	RequestProxy()
 	req, _ := http.NewRequest("GET", pathURL, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36")
 	client := &http.Client{}
