@@ -14,7 +14,7 @@ type Rbmq struct {
 }
 
 func (rbmq *Rbmq) ConnectRbmq() {
-	conn, err := amqp.Dial("amqp://" + rbmq.UserName + ":" + rbmq.Password +"@" + rbmq.Host + ":" + rbmq.Port)
+	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s", rbmq.UserName, rbmq.Password, rbmq.Host, rbmq.Port))
 	if err != nil {
 		log.Println("Failed to connect to RabbitMQ")
 		log.Println(err)
