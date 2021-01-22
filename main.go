@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/joho/godotenv"
 	"ioc-provider/crawler"
 	"ioc-provider/db"
@@ -43,8 +42,8 @@ func main() {
 	clientRB := &helper.Rbmq{
 		UserName: rbmqUserName,
 		Password: rbmqPassword,
-		Host: rbmqHost,
-		Port: rbmqPort,
+		Host:     rbmqHost,
+		Port:     rbmqPort,
 	}
 	clientRB.ConnectRbmq()
 
@@ -52,19 +51,27 @@ func main() {
 		IocRepo: repo_impl.NewIocRepo(clientES),
 	}
 	// time start crawler
-	schedule(60*time.Second, iocHandler)
+	go crawler.Subscribed(iocHandler.IocRepo)
+	crawler.LiveHunting(iocHandler.IocRepo)
+
+	// schedule crawler
+	go schedule(10*time.Second, iocHandler, 1)
+	schedule(10*time.Second, iocHandler, 2)
 }
 
-func schedule(timeSchedule time.Duration, handler IocHandler) {
+func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
 	ticker := time.NewTicker(timeSchedule)
 	func() {
-		fmt.Println(1)
 		for {
-			select {
-			case <-ticker.C:
-				fmt.Println("Crawler data...")
+			switch crowIlnndex {
+			case 1:
+				<-ticker.C
+				//fmt.Println("1")
 				crawler.Subscribed(handler.IocRepo)
-				//crawler.LiveHunting(handler.IocRepo)
+			case 2:
+				<-ticker.C
+				//fmt.Println("2")
+				crawler.LiveHunting(handler.IocRepo)
 			}
 		}
 	}()

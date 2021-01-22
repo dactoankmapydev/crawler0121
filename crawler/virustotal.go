@@ -6,7 +6,6 @@ import (
 	"ioc-provider/helper"
 	"ioc-provider/model"
 	"ioc-provider/repository"
-	"runtime"
 	"strings"
 )
 
@@ -34,7 +33,8 @@ type VirustotalResult struct {
 }
 
 func LiveHunting(repo repository.IocRepo) {
-	sample_list := make([]model.Sample, 0)
+	//fmt.Println("LiveHunting")
+	sampleList := make([]model.Sample, 0)
 	cursor := []string{""}
 	for len(cursor) > 0 {
 		pathAPI := fmt.Sprintf("https://www.virustotal.com/api/v3/intelligence/hunting_notification_files?cursor=%s", cursor[0]+"&limit=40")
@@ -63,7 +63,7 @@ func LiveHunting(repo repository.IocRepo) {
 						Detected:         len(virustotalResult.enginesDetected(i)),
 						Point:            virustotalResult.enginesPoint(i),
 					}
-					sample_list = append(sample_list, sample)
+					sampleList = append(sampleList, sample)
 					fmt.Println("sample->", sample)
 					repo.CreateIndex("sample", model.MappingSample)
 					repo.Index("ioc", sample.Sha256, sample)
@@ -73,9 +73,9 @@ func LiveHunting(repo repository.IocRepo) {
 			cursor = cursor[:0]
 		}
 	}
-	fmt.Println("len list_sample->", len(sample_list))
+	fmt.Println("len listSample->", len(sampleList))
 
-	queue := helper.NewJobQueue(runtime.NumCPU())
+	/*queue := helper.NewJobQueue(runtime.NumCPU())
 	queue.Start()
 	defer queue.Stop()
 	for _, sample := range sample_list {
@@ -83,7 +83,7 @@ func LiveHunting(repo repository.IocRepo) {
 			sample:  sample,
 			iocRepo: repo,
 		})
-	}
+	}*/
 }
 
 // Lọc ra loại engines detected

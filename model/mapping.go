@@ -1,7 +1,7 @@
 package model
 
 const (
-    AppName = "es01"
+	AppName       = "es01"
 	MappingSample = `
 	{
 		"settings":{

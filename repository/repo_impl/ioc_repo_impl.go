@@ -63,5 +63,5 @@ func (ioc IocRepoImpl) SearchIndex(index string, search string) error {
 	if err != nil {
 		return err
 	}
-    return nil
+	return nil
 }

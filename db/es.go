@@ -9,8 +9,8 @@ import (
 
 type ElasticDB struct {
 	Client *elastic.Client
-	Host string
-	Port string
+	Host   string
+	Port   string
 }
 
 func (es *ElasticDB) NewElasticDB() () {
@@ -20,7 +20,7 @@ func (es *ElasticDB) NewElasticDB() () {
 		elastic.SetHealthcheckInterval(3*time.Second),
 	)
 
-	info, code, err := es.Client.Ping(fmt.Sprintf(`http://%s:%s`,es.Host,es.Port)).Do(context.Background())
+	info, code, err := es.Client.Ping(fmt.Sprintf(`http://%s:%s`, es.Host, es.Port)).Do(context.Background())
 	if err != nil {
 		fmt.Printf("connection failed: %v\n", err)
 	}

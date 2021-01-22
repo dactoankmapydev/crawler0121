@@ -9,8 +9,8 @@ import (
 type Rbmq struct {
 	UserName string
 	Password string
-	Host string
-	Port string
+	Host     string
+	Port     string
 }
 
 func (rbmq *Rbmq) ConnectRbmq() {

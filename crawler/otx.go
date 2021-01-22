@@ -6,9 +6,7 @@ import (
 	"ioc-provider/helper"
 	"ioc-provider/model"
 	"ioc-provider/repository"
-	"log"
 	"math"
-	"runtime"
 )
 
 type OtxResult struct {
@@ -36,8 +34,9 @@ type OtxResult struct {
 }
 
 func Subscribed(repo repository.IocRepo) {
-	post_list := make([]model.Post, 0)
-	ioc_list := make([]model.Indicator, 0)
+	//fmt.Println("Subscribed")
+	postList := make([]model.Post, 0)
+	iocList := make([]model.Indicator, 0)
 	totalPage := TotalPageOtx()
 	for page := 1; page <= totalPage; page++ {
 		pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&page=%d", page)
@@ -64,9 +63,9 @@ func Subscribed(repo repository.IocRepo) {
 				References:        item.References,
 				Category:          item.Tags,
 			}
-			post_list = append(post_list, post)
-			/*fmt.Println("post->", post)
-			repo.CreateIndex("post", model.MappingPost)
+			postList = append(postList, post)
+			fmt.Println("post->", post)
+			/*repo.CreateIndex("post", model.MappingPost)
 			repo.Index("ioc", post.PulseID, post)*/
 
 			for _, value := range item.Indicators {
@@ -79,18 +78,18 @@ func Subscribed(repo repository.IocRepo) {
 					Source:      "otx",
 					Category:    item.Tags,
 				}
-				ioc_list = append(ioc_list, indicator)
-				//fmt.Println("indicator->", indicator)
-				repo.CreateIndex("ioc", model.MappingSample)
-				repo.Index("ioc", indicator.IocID, indicator)
+				iocList = append(iocList, indicator)
+				fmt.Println("indicator->", indicator)
+				/*repo.CreateIndex("ioc", model.MappingSample)
+				repo.Index("ioc", indicator.IocID, indicator)*/
 			}
 
 		}
 	}
-	fmt.Println("len post_list->", len(post_list))
-	fmt.Println("len ioc_list->", len(ioc_list))
+	fmt.Println("len postList->", len(postList))
+	fmt.Println("len iocList->", len(iocList))
 
-	queue := helper.NewJobQueue(runtime.NumCPU())
+	/*queue := helper.NewJobQueue(runtime.NumCPU())
 	queue.Start()
 	defer queue.Stop()
 	for _, ioc := range ioc_list {
@@ -105,7 +104,7 @@ func Subscribed(repo repository.IocRepo) {
 			post:    post,
 			iocRepo: repo,
 		})
-	}
+	}*/
 }
 
 func TotalPageOtx() int {
@@ -123,7 +122,7 @@ func TotalPageOtx() int {
 	return int(totalPage)
 }
 
-type SubscribedProcess struct {
+/*type SubscribedProcess struct {
 	indicator model.Indicator
 	post      model.Post
 	iocRepo   repository.IocRepo
@@ -139,4 +138,4 @@ func (process *SubscribedProcess) Process() {
 		}
 		return
 	}
-}
+}*/
