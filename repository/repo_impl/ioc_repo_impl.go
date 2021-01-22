@@ -56,7 +56,7 @@ func (ioc IocRepoImpl) Index(index string, id string, doc interface{}) error {
 func (ioc IocRepoImpl) SearchIndex(index string, search string) error {
 	ctx := context.Background()
 	matchQuery := elastic.NewMatchQuery(model.AppName, search)
-	res, err := ioc.es.Client.Search(index).
+	_, err := ioc.es.Client.Search(index).
 		Index(index).
 		Query(matchQuery).
 		Do(ctx)
