@@ -51,12 +51,10 @@ func main() {
 		IocRepo: repo_impl.NewIocRepo(clientES),
 	}
 	// time start crawler
-	go crawler.Subscribed(iocHandler.IocRepo)
-	crawler.LiveHunting(iocHandler.IocRepo)
+	crawler.GetAllDataSubscribed(iocHandler.IocRepo)
 
 	// schedule crawler
-	go schedule(10*time.Second, iocHandler, 1)
-	schedule(10*time.Second, iocHandler, 2)
+	schedule(5*time.Second, iocHandler, 1)
 }
 
 func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
@@ -64,14 +62,11 @@ func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
 	func() {
 		for {
 			switch crowIlnndex {
+
 			case 1:
 				<-ticker.C
-				//fmt.Println("1")
-				crawler.Subscribed(handler.IocRepo)
-			case 2:
-				<-ticker.C
 				//fmt.Println("2")
-				crawler.LiveHunting(handler.IocRepo)
+				crawler.GetAllDataSubscribed(handler.IocRepo)
 			}
 		}
 	}()

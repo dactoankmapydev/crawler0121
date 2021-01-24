@@ -2,7 +2,6 @@ package repo_impl
 
 import (
 	"context"
-	"errors"
 	"ioc-provider/db"
 	"ioc-provider/repository"
 	"log"
@@ -18,36 +17,48 @@ func NewIocRepo(es *db.ElasticDB) repository.IocRepo {
 	}
 }
 
-func (ioc IocRepoImpl) CreateIndex(indexName, mapping string) error {
+func (ioc IocRepoImpl) ExistsIndex(indexName string) bool {
 	ctx := context.Background()
 	exists, err := ioc.es.Client.IndexExists(indexName).Do(ctx)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	if !exists {
-		createIndex, err := ioc.es.Client.CreateIndex(indexName).
-			BodyString(mapping).
-			Do(ctx)
-		if err != nil {
-			return err
-		}
-		if !createIndex.Acknowledged {
-			return errors.New("CreateIndex was not acknowledged. Check that timeout value is correct.")
-		}
-	}
-	return nil
+	return exists
 }
 
-func (ioc IocRepoImpl) InsertIndex(indexName string, id string, record interface{}) error {
+func (ioc IocRepoImpl) CreateIndex(indexName, mapping string) {
+	ctx := context.Background()
+	createIndex, err := ioc.es.Client.CreateIndex(indexName).
+		Body(mapping).
+		Do(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !createIndex.Acknowledged {
+		log.Println("CreateIndex was not acknowledged. Check that timeout value is correct.")
+	}
+}
+
+func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{}) bool {
 	ctx := context.Background()
 	_, err := ioc.es.Client.Index().
 		Index(indexName).
 		Id(id).
-		BodyJson(record).
+		BodyJson(doc).
 		Do(ctx)
 	if err != nil {
-		log.Println(err)
+		log.Fatalf("client.Index() ERROR: %v", err)
 	}
-	return nil
+	return true
 }
 
+func (ioc IocRepoImpl) ExistsDoc(indexName, id string) bool {
+	ctx := context.Background()
+	exists, err := ioc.es.Client.Exists().
+		Index(indexName).Id(id).
+		Do(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return exists
+}

@@ -5,6 +5,7 @@ const (
 	IndexNameIndicator       = "indicator"
 	IndexNamePost       = "post"
 	IndexNameCompromised       = "compromised"
+
 	MappingSample = `
 	{
 		"settings":{
@@ -17,7 +18,7 @@ const (
 					"type":"text"
 				},
 				"sha256":{
-					"type":"text
+					"type":"text"
 				},
 				"sha1":{
 					"type":"text"
@@ -38,7 +39,7 @@ const (
 					"type":"text"
 				},
 				"engines_detected":{
-					"type":"text
+					"type":"text"
 				},
 				"detected":{
 					"type":"integer"
@@ -50,11 +51,11 @@ const (
 		}
 	}`
 
-	MappingIndicator = `
+	MappingIndicators = `
 	{
 		"settings":{
 			"number_of_shards": 2,
-			"number_of_replicas": 0
+			"number_of_replicas": 0,
 		},
 		"mappings":{
 			"properties":{
@@ -62,16 +63,13 @@ const (
 					"type":"text"
 				},
 				"ioc":{
-					"type":"text
+					"type":"text"
 				},
 				"ioc_type":{
 					"type":"text"
 				},
-				"created_time":{
-					"type":"text"
-				},
 				"crawled_time":{
-					"type":"date"
+					"type":"text"
 				},
 				"source":{
 					"type":"text"
@@ -87,38 +85,20 @@ const (
 	{
 		"settings":{
 			"number_of_shards": 2,
-			"number_of_replicas": 0
+            "number_of_replicas": 0
 		},
 		"mappings":{
 			"properties":{
-				"pulse_id":{
+				"id":{
 					"type":"text"
 				},
 				"name":{
-					"type":"text
+					"type":"text"
 				},
 				"description":{
 					"type":"text"
 				},
 				"author_name":{
-					"type":"text"
-				},
-				"modified":{
-					"type":"date"
-				},
-				"created":{
-					"type":"date"
-				},
-                "revision":{
-					"type":"integer"
-				},
-				"tlp":{
-					"type":"text
-				},
-				"public":{
-					"type":"integer"
-				},
-                "adversary":{
 					"type":"text"
 				},
 				"tags":{
@@ -127,9 +107,6 @@ const (
 				"targeted_countries":{
 					"type":"text"
 				},
-				"industries":{
-					"type":"text"
-				}
 				"malware_families":{
 					"type":"text"
 				},
@@ -137,6 +114,9 @@ const (
 					"type":"text"
 				},
 				"references":{
+					"type":"text"
+				},
+                "industries":{
 					"type":"text"
 				}
 			}
@@ -155,7 +135,7 @@ const (
 					"type":"text"
 				},
 				"hostname":{
-					"type":"text
+					"type":"text"
 				},
 				"src":{
 					"type":"text"
