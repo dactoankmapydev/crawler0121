@@ -1,8 +1,9 @@
+
 package model
 
 const (
 	IndexNameSample       = "virustotal-test"
-	IndexNameIoc       = "ioc"
+	IndexNameIoc       = "ioc-test"
 	IndexNamePost       = "post"
 	IndexNameCompromised       = "compromised"
 
@@ -55,14 +56,14 @@ const (
 	{
 		"settings":{
 			"number_of_shards": 2,
-			"number_of_replicas": 0,
+            "number_of_replicas": 0
 		},
 		"mappings":{
 			"properties":{
-				"id": {
-                    "type": "integer"
+				"ioc_id": {
+                    "type": "text"
                 },
-                "indicator": {
+                "ioc": {
                     "type": "text"
                 },
                 "type": {
@@ -79,7 +80,7 @@ const (
                 },
                 "category": {
                     "type": "text"
-                },
+                }
 			}
 		}
 	}`

@@ -1,8 +1,8 @@
 package model
 
 type Indicators struct {
-	IocID       int64    `json:"id"`
-	Ioc         string   `json:"indicator"`
+	IocID       string    `json:"ioc_id"`
+	Ioc         string   `json:"ioc"`
 	IocType     string   `json:"type"`
 	CreatedTime string   `json:"created"`
 	CrawledTime string   `json:"crawled_time"`

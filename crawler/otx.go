@@ -9,6 +9,7 @@ import (
 	"ioc-provider/repository"
 	"log"
 	"math"
+	"strconv"
 )
 
 type Data struct {
@@ -33,7 +34,7 @@ type Results struct {
 }
 
 type Indicators struct {
-	ID        int64  `json:"id"`
+	ID        int  `json:"id"`
 	Indicator string `json:"indicator"`
 	Type      string `json:"type"`
 	Created   string `json:"created"`
@@ -48,7 +49,7 @@ func checkError(err error) {
 func TotalPageOtx() int {
 	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50")
 	fmt.Println("pathAPI->", pathAPI)
-	body, err := helper.HttpClient.GetRequestOtx(pathAPI)
+	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
 	checkError(err)
 	var data Data
 	json.Unmarshal(body, &data)
@@ -61,7 +62,7 @@ func TotalPageOtx() int {
 func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 	postList := make([]model.Post, 0)
 	iocList := make([]model.Indicators, 0)
-	body, err := helper.HttpClient.GetRequestOtx(pathAPI)
+	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
 	checkError(err)
 	var data Data
 	json.Unmarshal(body, &data)
@@ -114,7 +115,7 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 
 			indicator := model.Indicators{
 				//IocID:       strconv.FormatInt(value.IocID, 10),
-				IocID:       value.ID,
+				IocID:       strconv.Itoa(value.ID),
 				Ioc:         value.Indicator,
 				IocType:     value.Type,
 				CreatedTime: value.Created,
@@ -194,10 +195,15 @@ func GetAllDataSubscribed(repo repository.IocRepo) {
 						Category:    ioc.Category,
 					}
 					iocs = append(iocs, oneIoc)
-                    fmt.Println(oneIoc)
-					success := repo.InsertIocIndex(model.IndexNameIoc, oneIoc)
-					if !success {
-						fmt.Println(success)
+					existsID := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.Ioc, oneIoc.IocType, oneIoc.CreatedTime))
+					if existsID {
+						fmt.Println("id exists", helper.Hash(oneIoc.IocID, oneIoc.Ioc, oneIoc.IocType, oneIoc.CreatedTime))
+						break
+					} else {
+						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.Ioc, oneIoc.IocType, oneIoc.CreatedTime), oneIoc)
+						if !success {
+							fmt.Println(success)
+						}
 					}
 				}
 				return nil

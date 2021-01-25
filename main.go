@@ -52,6 +52,7 @@ func main() {
 	}
 	// time start crawler
 	crawler.GetAllDataSubscribed(iocHandler.IocRepo)
+	//crawler.LiveHunting(iocHandler.IocRepo)
 
 	// schedule crawler
 	schedule(5*time.Second, iocHandler, 1)
@@ -67,6 +68,7 @@ func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
 				<-ticker.C
 				//fmt.Println("2")
 				crawler.GetAllDataSubscribed(handler.IocRepo)
+				//crawler.LiveHunting(handler.IocRepo)
 			}
 		}
 	}()
