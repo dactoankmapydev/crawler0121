@@ -2,7 +2,7 @@ package model
 
 const (
 	IndexNameSample       = "sample"
-	IndexNameIndicator       = "indicator"
+	IndexNameIoc       = "ioc"
 	IndexNamePost       = "post"
 	IndexNameCompromised       = "compromised"
 
@@ -51,7 +51,7 @@ const (
 		}
 	}`
 
-	MappingIndicators = `
+	MappingIoc = `
 	{
 		"settings":{
 			"number_of_shards": 2,
@@ -59,13 +59,16 @@ const (
 		},
 		"mappings":{
 			"properties":{
-				"ioc_id":{
+				"id":{
 					"type":"text"
 				},
-				"ioc":{
+				"indicator":{
 					"type":"text"
 				},
-				"ioc_type":{
+				"type":{
+					"type":"text"
+				},
+                "created":{
 					"type":"text"
 				},
 				"crawled_time":{
@@ -99,6 +102,12 @@ const (
 					"type":"text"
 				},
 				"author_name":{
+					"type":"text"
+				},
+                "modified":{
+					"type":"text"
+				},
+				"created":{
 					"type":"text"
 				},
 				"tags":{

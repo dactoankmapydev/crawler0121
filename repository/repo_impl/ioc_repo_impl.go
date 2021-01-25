@@ -28,15 +28,15 @@ func (ioc IocRepoImpl) ExistsIndex(indexName string) bool {
 
 func (ioc IocRepoImpl) CreateIndex(indexName, mapping string) {
 	ctx := context.Background()
-	createIndex, err := ioc.es.Client.CreateIndex(indexName).
+	_, _ = ioc.es.Client.CreateIndex(indexName).
 		Body(mapping).
 		Do(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if !createIndex.Acknowledged {
-		log.Println("CreateIndex was not acknowledged. Check that timeout value is correct.")
-	}
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	//if !createIndex.Acknowledged {
+	//	log.Println("CreateIndex was not acknowledged. Check that timeout value is correct.")
+	//}
 }
 
 func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{}) bool {

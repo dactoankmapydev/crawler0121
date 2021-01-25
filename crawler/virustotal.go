@@ -34,6 +34,10 @@ type VirustotalResult struct {
 }
 
 func LiveHunting(repo repository.IocRepo) {
+	existsPost := repo.ExistsIndex(model.IndexNameSample)
+	if !existsPost {
+		repo.CreateIndex(model.MappingSample, model.MappingSample)
+	}
 	sampleList := make([]model.Sample, 0)
 	cursor := []string{""}
 	for len(cursor) > 0 {
@@ -64,6 +68,15 @@ func LiveHunting(repo repository.IocRepo) {
 						Point:            virustotalResult.enginesPoint(i),
 					}
 					sampleList = append(sampleList, sample)
+					existsID := repo.ExistsDoc(model.IndexNameSample, sample.Sha256)
+					if existsID {
+						break
+					} else {
+						success := repo.InsertIndex(model.IndexNameSample, sample.Sha256, sample)
+						if !success {
+							return
+						}
+					}
 					fmt.Println("sample->", sample)
 				}
 			}
