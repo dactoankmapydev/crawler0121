@@ -9,35 +9,34 @@ import (
 	"ioc-provider/repository"
 	"log"
 	"math"
-	"strconv"
 )
 
 type Data struct {
 	Results []Results `json:"results"`
-	Count int `json:"count"`
+	Count   int       `json:"count"`
 }
 
 type Results struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Description string `json:"description"`
-	AuthorName string `json:"author_name"`
-	Modified string `json:"modified"`
-	Created string `json:"created"`
-	Indicators []Indicators `json:"indicators"`
-	Tags []string `json:"tags"`
-	TargetedCountries []string `json:"targeted_countries"`
-	MalwareFamilies []string `json:"malware_families"`
-	AttackIds []string `json:"attack_ids"`
-	References []string `json:"references"`
-	Industries []string `json:"industries"`
+	ID                string       `json:"id"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description"`
+	AuthorName        string       `json:"author_name"`
+	Modified          string       `json:"modified"`
+	Created           string       `json:"created"`
+	Indicators        []Indicators `json:"indicators"`
+	Tags              []string     `json:"tags"`
+	TargetedCountries []string     `json:"targeted_countries"`
+	MalwareFamilies   []string     `json:"malware_families"`
+	AttackIds         []string     `json:"attack_ids"`
+	References        []string     `json:"references"`
+	Industries        []string     `json:"industries"`
 }
 
 type Indicators struct {
-	ID int64 `json:"id"`
+	ID        int64  `json:"id"`
 	Indicator string `json:"indicator"`
-	Type string `json:"type"`
-	Created string `json:"created"`
+	Type      string `json:"type"`
+	Created   string `json:"created"`
 }
 
 func checkError(err error) {
@@ -67,7 +66,13 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 	var data Data
 	json.Unmarshal(body, &data)
 
+	sample := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5"}
+	url := []string{"URL", "URI"}
+	domain := []string{"hostname", "domain"}
+	ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
+
 	for _, item := range data.Results {
+
 		post := model.Post{
 			ID:                item.ID,
 			Name:              item.Name,
@@ -86,6 +91,27 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 		//fmt.Println("post->", post)
 
 		for _, value := range item.Indicators {
+
+			_, foundSample := Find(sample, value.Type)
+			if foundSample {
+				value.Type = "sample"
+			}
+
+			_, foundUrl := Find(url, value.Type)
+			if foundUrl {
+				value.Type = "url"
+			}
+
+			_, foundDomain := Find(domain, value.Type)
+			if foundDomain {
+				value.Type = "domain"
+			}
+
+			_, foundIpaddress := Find(ipaddress, value.Type)
+			if foundIpaddress {
+				value.Type = "ipaddress"
+			}
+
 			indicator := model.Indicators{
 				//IocID:       strconv.FormatInt(value.IocID, 10),
 				IocID:       value.ID,
@@ -103,7 +129,7 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 	return postList, iocList, nil
 }
 
-func GetAllDataSubscribed(repo repository.IocRepo) () {
+func GetAllDataSubscribed(repo repository.IocRepo) {
 	eg := errgroup.Group{}
 	existsPost := repo.ExistsIndex(model.IndexNamePost)
 	if !existsPost {
@@ -168,14 +194,10 @@ func GetAllDataSubscribed(repo repository.IocRepo) () {
 						Category:    ioc.Category,
 					}
 					iocs = append(iocs, oneIoc)
-					existsID := repo.ExistsDoc(model.IndexNameIoc, strconv.FormatInt(oneIoc.IocID, 10))
-					if existsID {
-						break
-					} else {
-						success := repo.InsertIndex(model.IndexNameIoc, strconv.FormatInt(oneIoc.IocID, 10), oneIoc)
-						if !success {
-							return nil
-						}
+                    fmt.Println(oneIoc)
+					success := repo.InsertIocIndex(model.IndexNameIoc, oneIoc)
+					if !success {
+						fmt.Println(success)
 					}
 				}
 				return nil
@@ -189,4 +211,13 @@ func GetAllDataSubscribed(repo repository.IocRepo) () {
 	fmt.Println("-----------------------------")
 	fmt.Println("total post:", totalPost)
 	fmt.Println("total ioc:", totalIoc)
+}
+
+func Find(slice []string, val string) (int, bool) {
+	for i, item := range slice {
+		if item == val {
+			return i, true
+		}
+	}
+	return -1, false
 }
