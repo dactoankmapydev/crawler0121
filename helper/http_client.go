@@ -26,18 +26,13 @@ func dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, timeout)
 }
 
-func RequestProxy() {
-	proxyURL, _ := url.Parse("http://127.0.0.1:3130")
-	http.DefaultTransport = &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
-	}
-}
-
 func (c HTTPClient) GetRequestVirustotal(api string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", api, nil)
 	req.Header.Add("X-Apikey", "7d42532bd1dea1e55f7a8e99cdee23d9b26c386a6485d6dcb4106b9d055f9277")
+	proxyURL, _ := url.Parse("http://127.0.0.1:3128")
 	transport := http.Transport{
-		Dial: dialTimeout,
+		Dial:  dialTimeout,
+		Proxy: http.ProxyURL(proxyURL),
 	}
 	client := &http.Client{
 		Transport: &transport,
@@ -58,14 +53,17 @@ func (c HTTPClient) GetRequestVirustotal(api string) ([]byte, error) {
 
 func (c HTTPClient) GetRequestOtx(api string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", api, nil)
+
 	req.Header.Add("X-OTX-API-KEY", "779cc51038ddb07c5f6abe0832fed858a6039b9e8cdb167d3191938c1391dbba")
-	/*transport := http.Transport{
-		Dial: dialTimeout,
+	proxyURL, _ := url.Parse("http://127.0.0.1:3128")
+	transport := http.Transport{
+		Dial:  dialTimeout,
+		Proxy: http.ProxyURL(proxyURL),
 	}
 	client := &http.Client{
 		Transport: &transport,
-	}*/
-	client := &http.Client{}
+	}
+	//client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -83,12 +81,13 @@ func (c HTTPClient) GetRequestOtx(api string) ([]byte, error) {
 func (c HTTPClient) GetRequestMirrorH(pathURL string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", pathURL, nil)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36")
-	transport := http.Transport{
+	/*transport := http.Transport{
 		Dial: dialTimeout,
 	}
 	client := &http.Client{
 		Transport: &transport,
-	}
+	}*/
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
