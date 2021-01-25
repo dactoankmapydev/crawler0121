@@ -1,7 +1,7 @@
 package model
 
 const (
-	IndexNameSample       = "sample"
+	IndexNameSample       = "virustotal-test"
 	IndexNameIoc       = "ioc"
 	IndexNamePost       = "post"
 	IndexNameCompromised       = "compromised"
@@ -59,27 +59,27 @@ const (
 		},
 		"mappings":{
 			"properties":{
-				"id":{
-					"type":"text"
-				},
-				"indicator":{
-					"type":"text"
-				},
-				"type":{
-					"type":"text"
-				},
-                "created":{
-					"type":"text"
-				},
-				"crawled_time":{
-					"type":"text"
-				},
-				"source":{
-					"type":"text"
-				},
-				"category":{
-					"type":"text"
-				}
+				"id": {
+                    "type": "integer"
+                },
+                "indicator": {
+                    "type": "text"
+                },
+                "type": {
+                    "type": "text"
+                },
+                "created": {
+                    "type": "text"
+                },
+                "crawled_time": {
+                    "type": "text"
+                },
+                "source": {
+                    "type": "text"
+                },
+                "category": {
+                    "type": "text"
+                },
 			}
 		}
 	}`
