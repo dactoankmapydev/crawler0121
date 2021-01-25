@@ -2,9 +2,12 @@ package repo_impl
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/uuid"
 	"ioc-provider/db"
 	"ioc-provider/repository"
 	"log"
+	"strings"
 )
 
 type IocRepoImpl struct {
@@ -21,7 +24,7 @@ func (ioc IocRepoImpl) ExistsIndex(indexName string) bool {
 	ctx := context.Background()
 	exists, err := ioc.es.Client.IndexExists(indexName).Do(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return exists
 }
@@ -47,7 +50,23 @@ func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{})
 		BodyJson(doc).
 		Do(ctx)
 	if err != nil {
-		log.Fatalf("client.Index() ERROR: %v", err)
+		fmt.Println(doc)
+		log.Println("client.Index() ERROR: %v", err)
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) InsertIocIndex(indexName string, doc interface{}) bool {
+	id := uuid.New().String()
+	_, err := ioc.es.Client.Index().
+		Id(strings.Replace(id,"-","",-1)).
+		Index(indexName).
+		BodyJson(doc).
+		Do(context.Background())
+	if err != nil {
+		fmt.Println(doc)
+		log.Println("client.Index() ERROR: %v", err)
+		return false
 	}
 	return true
 }
@@ -58,7 +77,7 @@ func (ioc IocRepoImpl) ExistsDoc(indexName, id string) bool {
 		Index(indexName).Id(id).
 		Do(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return exists
 }
