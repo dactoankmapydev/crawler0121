@@ -10,6 +10,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"time"
 )
 
 type Data struct {
@@ -87,6 +88,7 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 			AttackIds:         item.AttackIds,
 			Industries:        item.Industries,
 			References:        item.References,
+			CrawledTime:       time.Now().Format(time.RFC3339),
 		}
 		postList = append(postList, post)
 		//fmt.Println("post->", post)
@@ -119,9 +121,10 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 				Ioc:         value.Indicator,
 				IocType:     value.Type,
 				CreatedTime: value.Created,
-				CrawledTime: "",
+				CrawledTime: time.Now().Format(time.RFC3339),
 				Source:      "otx",
 				Category:    item.Tags,
+				PostID:      item.ID,
 			}
 			iocList = append(iocList, indicator)
 			//fmt.Println("indicator->", indicator)
@@ -134,10 +137,12 @@ func GetAllDataSubscribed(repo repository.IocRepo) {
 	eg := errgroup.Group{}
 	existsPost := repo.ExistsIndex(model.IndexNamePost)
 	if !existsPost {
+		fmt.Printf("not exist %s", model.IndexNamePost)
 		repo.CreateIndex(model.IndexNamePost, model.MappingPost)
 	}
 	existsIndicator := repo.ExistsIndex(model.IndexNameIoc)
 	if !existsIndicator {
+		fmt.Printf("not exist %s", model.IndexNameIoc)
 		repo.CreateIndex(model.IndexNameIoc, model.MappingIoc)
 	}
 
@@ -146,6 +151,8 @@ func GetAllDataSubscribed(repo repository.IocRepo) {
 	var totalIoc int = 0
 	posts := make([]model.Post, 0)
 	iocs := make([]model.Indicators, 0)
+	//posts := []model.Post{}
+	//iocs := []model.Indicators{}
 
 	if totalPage > 0 {
 		for page := 1; page <= totalPage; page++ {
@@ -170,6 +177,7 @@ func GetAllDataSubscribed(repo repository.IocRepo) {
 						MalwareFamilies:   post.MalwareFamilies,
 						AttackIds:         post.AttackIds,
 						References:        post.References,
+						CrawledTime:       post.CrawledTime,
 					}
 					//fmt.Println(onePost)
 					posts = append(posts, onePost)
@@ -178,8 +186,9 @@ func GetAllDataSubscribed(repo repository.IocRepo) {
 						break
 					} else {
 						success := repo.InsertIndex(model.IndexNamePost, onePost.ID, onePost)
+						//success := repo.InsertManyIndexPost(model.IndexNamePost, onePost.ID, posts)
 						if !success {
-							return nil
+							fmt.Println(success)
 						}
 					}
 				}
@@ -190,17 +199,21 @@ func GetAllDataSubscribed(repo repository.IocRepo) {
 						Ioc:         ioc.Ioc,
 						IocType:     ioc.IocType,
 						CreatedTime: ioc.CreatedTime,
-						CrawledTime: "",
+						CrawledTime: ioc.CrawledTime,
 						Source:      "otx",
 						Category:    ioc.Category,
+						PostID:      ioc.PostID,
 					}
+					//fmt.Println(oneIoc)
 					iocs = append(iocs, oneIoc)
-					existsID := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.Ioc, oneIoc.IocType, oneIoc.CreatedTime))
+					existsID := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime))
 					if existsID {
-						fmt.Println("id exists", helper.Hash(oneIoc.IocID, oneIoc.Ioc, oneIoc.IocType, oneIoc.CreatedTime))
+						fmt.Println("id exists", helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime))
 						break
 					} else {
-						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.Ioc, oneIoc.IocType, oneIoc.CreatedTime), oneIoc)
+						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime), oneIoc)
+						time.Sleep(1*time.Second)
+						//success := repo.InsertManyIndexIoc(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID), iocs)
 						if !success {
 							fmt.Println(success)
 						}
@@ -227,3 +240,5 @@ func Find(slice []string, val string) (int, bool) {
 	}
 	return -1, false
 }
+
+
