@@ -1,8 +1,12 @@
 package main
 
 import (
+	"crypto"
+	"encoding/hex"
+	"fmt"
 	"github.com/gocolly/colly"
 	"log"
+	"reflect"
 )
 
 type Compromised struct {
@@ -24,9 +28,15 @@ func main() {
 	}
 	c.OnHTML("table tbody", func(e *colly.HTMLElement) {
 		e.ForEach("tr", func(_ int, row *colly.HTMLElement) {
+			rows := make([]string, 0)
 			row.ForEach("td", func(_ int, el *colly.HTMLElement) {
-				//fmt.Println(el.Text)
-				//fmt.Println(el.Index)
+				rows = append(rows, el.Text)
+				fmt.Println(rows[0])
+					//fmt.Println(rows[1])
+					//fmt.Println(rows[2])
+					//fmt.Println(rows[3])
+					//fmt.Println(Hash(compromise.UID, compromise.HostName))
+
 			})
 		})
 	})
@@ -41,3 +51,12 @@ func main() {
 	//	})
 	//})
 
+func Hash(objs ...interface{}) string {
+	digester := crypto.MD5.New()
+	for _, ob := range objs {
+		fmt.Fprint(digester, reflect.TypeOf(ob))
+		fmt.Fprint(digester, ob)
+	}
+	theHash := hex.EncodeToString(digester.Sum(nil))
+	return theHash
+}
