@@ -1,10 +1,9 @@
-
 package model
 
 const (
 	IndexNameSample       = "virustotal-test"
-	IndexNameIoc       = "ioc-test"
-	IndexNamePost       = "post"
+	IndexNameIoc       = "otx-ioc-test-0"
+	IndexNamePost       = "otx-post-test-0"
 	IndexNameCompromised       = "compromised"
 
 	MappingSample = `
@@ -80,9 +79,12 @@ const (
                 },
                 "category": {
                     "type": "text"
-                }
-			}
-		}
+                },
+                "post_id": {
+                    "type": "text"
+			    }
+		    }
+        }
 	}`
 
 	MappingPost = `
@@ -128,7 +130,10 @@ const (
 				},
                 "industries":{
 					"type":"text"
-				}
+				},
+                "crawled_time": {
+                    "type": "text"
+                }
 			}
 		}
 	}`
