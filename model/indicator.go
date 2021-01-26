@@ -8,4 +8,5 @@ type Indicators struct {
 	CrawledTime string   `json:"crawled_time"`
 	Source      string   `json:"source"`
 	Category    []string `json:"category"`
+	PostID     string   `json:"post_id"`
 }
