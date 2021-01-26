@@ -13,4 +13,5 @@ type Post struct {
 	AttackIds         []string `json:"attack_ids"`
 	References        []string `json:"references"`
 	Industries        []string `json:"industries"`
+	CrawledTime       string   `json:"crawled_time"`
 }
