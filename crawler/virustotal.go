@@ -1,4 +1,3 @@
-
 package crawler
 
 import (
@@ -44,8 +43,7 @@ func LiveHunting(repo repository.IocRepo) {
 	cursor := []string{""}
 	for len(cursor) > 0 {
 		pathAPI := fmt.Sprintf("https://www.virustotal.com/api/v3/intelligence/hunting_notification_files?cursor=%s", cursor[0]+"&limit=40")
-		fmt.Println("pathAPI->", pathAPI)
-		body, err := helper.HttpClient.GetMirrorWithRetries(pathAPI)
+		body, err := helper.HttpClient.GetVirustotalWithRetries(pathAPI)
 		if err != nil {
 			return
 		}
@@ -69,7 +67,7 @@ func LiveHunting(repo repository.IocRepo) {
 						Detected:         len(virustotalResult.enginesDetected(i)),
 						Point:            virustotalResult.enginesPoint(i),
 					}
-					fmt.Println("sample->", sample)
+					//fmt.Println("sample->", sample)
 					sampleList = append(sampleList, sample)
 					existsID := repo.ExistsDoc(model.IndexNameSample, sample.Sha256)
 					if existsID {
