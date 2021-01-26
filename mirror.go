@@ -30,8 +30,8 @@ func main() {
 		e.ForEach("tr", func(_ int, row *colly.HTMLElement) {
 			rows := make([]string, 0)
 			row.ForEach("td", func(_ int, el *colly.HTMLElement) {
-				rows = append(rows, el.Text)
-				fmt.Println(rows[0])
+				rows = append(rows, el.Text)})
+			fmt.Println(rows[2])
 					//fmt.Println(rows[1])
 					//fmt.Println(rows[2])
 					//fmt.Println(rows[3])
@@ -39,9 +39,9 @@ func main() {
 
 			})
 		})
-	})
 	c.Visit("https://mirror-h.org/archive/page/1")
 }
+
 
 
 	//c.OnHTML("body", func(body *colly.HTMLElement) {
