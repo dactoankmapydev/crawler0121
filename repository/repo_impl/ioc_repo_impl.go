@@ -3,9 +3,12 @@ package repo_impl
 import (
 	"context"
 	"fmt"
+	"github.com/olivere/elastic/v7"
 	"ioc-provider/db"
+	"ioc-provider/model"
 	"ioc-provider/repository"
 	"log"
+	"time"
 )
 
 type IocRepoImpl struct {
@@ -35,6 +38,7 @@ func (ioc IocRepoImpl) CreateIndex(indexName, mapping string) {
 }
 
 func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{}) bool {
+	time.Sleep(20*time.Millisecond)
 	_, err := ioc.es.Client.Index().
 		Index(indexName).
 		Id(id).
@@ -43,6 +47,38 @@ func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{})
 	if err != nil {
 		fmt.Println(doc)
 		log.Println("client.Index() ERROR: %v", err)
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) InsertManyIndexIoc(indexName, id string, docs []model.Indicators) bool {
+	bulkRequest := ioc.es.Client.Bulk()
+	for _, doc := range docs {
+		req := elastic.NewBulkIndexRequest().Index(indexName).Id(id).Doc(doc)
+		bulkRequest = bulkRequest.Add(req)
+	}
+	bulkResponse, err := bulkRequest.Do(context.Background())
+	if err != nil {
+		fmt.Println(err)
+	}
+	if bulkResponse != nil {
+
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) InsertManyIndexPost(indexName, id string, docs []model.Post) bool {
+	bulkRequest := ioc.es.Client.Bulk()
+	for _, doc := range docs {
+		req := elastic.NewBulkIndexRequest().Index(indexName).Id(id).Doc(doc)
+		bulkRequest = bulkRequest.Add(req)
+	}
+	bulkResponse, err := bulkRequest.Do(context.Background())
+	if err != nil {
+		fmt.Println(err)
+	}
+	if bulkResponse != nil {
+
 	}
 	return true
 }
