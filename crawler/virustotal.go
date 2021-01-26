@@ -7,6 +7,7 @@ import (
 	"ioc-provider/model"
 	"ioc-provider/repository"
 	"strings"
+	"time"
 )
 
 type VirustotalResult struct {
@@ -66,6 +67,7 @@ func LiveHunting(repo repository.IocRepo) {
 						EnginesDetected:  virustotalResult.enginesDetected(i),
 						Detected:         len(virustotalResult.enginesDetected(i)),
 						Point:            virustotalResult.enginesPoint(i),
+						CrawledTime:      time.Now().Format(time.RFC3339),
 					}
 					//fmt.Println("sample->", sample)
 					sampleList = append(sampleList, sample)
@@ -244,4 +246,25 @@ func (vr VirustotalResult) enginesDetected(i int) []string {
 // Tính điểm engines
 func (vr VirustotalResult) enginesPoint(i int) int {
 	return point(vr.enginesDetected(i))
+}
+
+type VirustotalProcess struct {
+	sample     model.Sample
+	iocRepo  repository.IocRepo
+}
+
+func (process *VirustotalProcess) Process() {
+	existsSample := process.iocRepo.ExistsIndex(model.IndexNameSample)
+	if !existsSample {
+		process.iocRepo.CreateIndex(model.IndexNameSample, model.MappingSample)
+	}
+	existsID := process.iocRepo.ExistsDoc(model.IndexNameSample, process.sample.Sha256)
+	if existsID {
+		return
+	} else {
+		success := process.iocRepo.InsertIndex(model.IndexNameSample, process.sample.Sha256, process.sample)
+		if !success {
+			return
+		}
+	}
 }

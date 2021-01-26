@@ -46,7 +46,10 @@ const (
 				},
 				"point":{
 					"type":"integer"
-				}
+				},
+                "crawled_time": {
+                    "type": "text"
+                }
 			}
 		}
 	}`
@@ -159,14 +162,17 @@ const (
 					"type":"text"
 				},
 				"creation_date":{
-					"type":"date"
+					"type":"text"
 				},
 				"timestamp":{
 					"type":"date"
 				},
 				"country":{
 					"type":"text"
-				}
+				},
+                "crawled_time": {
+                    "type": "text"
+                }
 			}
 		}
 	}`

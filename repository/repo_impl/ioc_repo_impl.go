@@ -8,7 +8,6 @@ import (
 	"ioc-provider/model"
 	"ioc-provider/repository"
 	"log"
-	"time"
 )
 
 type IocRepoImpl struct {
@@ -38,7 +37,6 @@ func (ioc IocRepoImpl) CreateIndex(indexName, mapping string) {
 }
 
 func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{}) bool {
-	time.Sleep(20*time.Millisecond)
 	_, err := ioc.es.Client.Index().
 		Index(indexName).
 		Id(id).

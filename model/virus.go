@@ -12,4 +12,5 @@ type Sample struct {
 	EnginesDetected  []string `json:"engines_detected"`
 	Detected         int      `json:"detected"`
 	Point            int      `json:"point"`
+	CrawledTime       string   `json:"crawled_time"`
 }
