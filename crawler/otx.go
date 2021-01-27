@@ -1,5 +1,5 @@
 package crawler
-// 2021-01-26T03:15:41
+
 import (
 	"encoding/json"
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,6 +61,7 @@ func TotalPage() int {
 }
 
 func Subscribed(repo repository.IocRepo) {
+	loc, _ := time.LoadLocation("Europe/London")
 	postList := make([]model.Post, 0)
 	iocList := make([]model.Indicators, 0)
 	totalPage := TotalPage()
@@ -101,14 +103,14 @@ func Subscribed(repo repository.IocRepo) {
 				AttackIds:         item.AttackIds,
 				Industries:        item.Industries,
 				References:        item.References,
-				CrawledTime:       time.Now().Format(time.RFC3339),
+				CrawledTime:       strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 			}
 			postList = append(postList, post)
-			existsIdPost := repo.ExistsDoc(model.IndexNamePost, post.ID)
+			existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
 			if existsIdPost {
-				fmt.Println("existsIdPost", post.ID)
+				fmt.Println("existsIdPost", helper.Hash(post.ID, post.Modified))
 			} else {
-				success := repo.InsertIndex(model.IndexNamePost, post.ID, post)
+				success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
 				if !success {
 					return
 				}
@@ -142,7 +144,7 @@ func Subscribed(repo repository.IocRepo) {
 						Ioc:         value.Indicator,
 						IocType:     value.Type,
 						CreatedTime: value.Created,
-						CrawledTime: time.Now().Format(time.RFC3339),
+						CrawledTime: strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 						Source:      "otx",
 						Category:    item.Tags,
 						PostID:      item.ID,
@@ -166,14 +168,17 @@ func Subscribed(repo repository.IocRepo) {
 }
 
 func SubscribedAfter(repo repository.IocRepo) {
+	loc, _ := time.LoadLocation("Europe/London")
 	postList := make([]model.Post, 0)
 	iocList := make([]model.Indicators, 0)
-    timeNow := time.Now().Format(time.RFC3339)
+
+	timeNow := strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1)
 	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=%s", timeNow)
 	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
 	checkError(err)
 	var data Data
 	json.Unmarshal(body, &data)
+	countPost := data.Count
 
 	trustType := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5", "URL", "URI", "hostname", "domain", "IPv6", "IPv4", "BitcoinAddress"}
 	sample := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5"}
@@ -181,7 +186,8 @@ func SubscribedAfter(repo repository.IocRepo) {
 	domain := []string{"hostname", "domain"}
 	ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
 
-	for _, item := range data.Results {
+	if countPost != 0 {
+		for _, item := range data.Results {
 			post := model.Post{
 				ID:                item.ID,
 				Name:              item.Name,
@@ -195,14 +201,14 @@ func SubscribedAfter(repo repository.IocRepo) {
 				AttackIds:         item.AttackIds,
 				Industries:        item.Industries,
 				References:        item.References,
-				CrawledTime:       time.Now().Format(time.RFC3339),
+				CrawledTime:       strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 			}
 			postList = append(postList, post)
-			existsIdPost := repo.ExistsDoc(model.IndexNamePost, post.ID)
+			existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
 			if existsIdPost {
-				fmt.Println("existsIdPost", post.ID)
+				fmt.Println("existsIdPost", helper.Hash(post.ID, post.Modified))
 			} else {
-				success := repo.InsertIndex(model.IndexNamePost, post.ID, post)
+				success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
 				if !success {
 					return
 				}
@@ -236,7 +242,7 @@ func SubscribedAfter(repo repository.IocRepo) {
 						Ioc:         value.Indicator,
 						IocType:     value.Type,
 						CreatedTime: value.Created,
-						CrawledTime: time.Now().Format(time.RFC3339),
+						CrawledTime: strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 						Source:      "otx",
 						Category:    item.Tags,
 						PostID:      item.ID,
@@ -248,6 +254,7 @@ func SubscribedAfter(repo repository.IocRepo) {
 						fmt.Println("existsIdIoc", helper.Hash(indicator.IocID, indicator.PostID, indicator.CrawledTime))
 						break
 					} else {
+
 						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID, indicator.CrawledTime), indicator)
 						if !success {
 							return
@@ -256,6 +263,9 @@ func SubscribedAfter(repo repository.IocRepo) {
 				}
 			}
 		}
+	} else {
+		fmt.Println("Not pulse new")
+	}
 }
 
 func Find(slice []string, val string) (int, bool) {
@@ -266,3 +276,5 @@ func Find(slice []string, val string) (int, bool) {
 	}
 	return -1, false
 }
+
+
