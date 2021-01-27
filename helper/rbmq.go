@@ -7,11 +7,14 @@ import (
 )
 
 type Rbmq struct {
-	Channel *amqp.Channel
 	UserName string
 	Password string
 	Host     string
 	Port     string
+}
+
+type Chan struct {
+	Channel *amqp.Channel
 }
 
 func (rbmq *Rbmq) ConnectRbmq() (){
@@ -28,8 +31,20 @@ func (rbmq *Rbmq) ConnectRbmq() (){
 	defer ch.Close()
 }
 
-func (rbmq *Rbmq) Publish(routingKey string, data []byte) {
-	err := rbmq.Channel.Publish(
+func (ch *Chan) Publish(routingKey string, data []byte) {
+	//var ch *amqp.Channel
+	q, err := ch.Channel.QueueDeclare(
+		routingKey,
+		true,
+		false,
+		false,
+		false,
+		nil,
+		)
+	fmt.Println(q)
+	failOnErr(err, "Failed to create the queue")
+
+	err = ch.Channel.Publish(
 		"",
 		routingKey,
 		false,
@@ -37,9 +52,10 @@ func (rbmq *Rbmq) Publish(routingKey string, data []byte) {
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body: data,
+			Priority: 5,
 		})
 	failOnErr(err, "Failed to publish a msg")
-	log.Printf("send %s", data)
+	log.Printf("Successfully published message %s", data)
 }
 
 func failOnErr(err error, msg string) {
