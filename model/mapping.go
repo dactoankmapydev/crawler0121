@@ -1,10 +1,12 @@
 package model
 
 const (
-	IndexNameSample       = "virustotal-test"
+	IndexNameSample       = "virustotal-test-0"
 	IndexNameIoc       = "otx-ioc-test-0"
 	IndexNamePost       = "otx-post-test-0"
-	IndexNameCompromised       = "compromised"
+	IndexNameIoc1       = "otx-ioc-test-1"
+	IndexNamePost1       = "otx-post-test-1"
+	IndexNameCompromised       = "mirror-compromised-test-0"
 
 	MappingSample = `
 	{
@@ -27,10 +29,10 @@ const (
 					"type":"text"
 				},
 				"first_submit":{
-					"type":"date"
+					"type":"text"
 				},
 				"notification_date":{
-					"type":"date"
+					"type":"text"
 				},
 				"file_type":{
 					"type":"text"
