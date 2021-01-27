@@ -18,14 +18,14 @@ type VirustotalResult struct {
 			Sha1                string   `json:"sha1"`
 			Sha256              string   `json:"sha256"`
 			Tags                []string `json:"tags"`
-			FirstSubmissionDate int      `json:"first_submission_date"`
+			FirstSubmissionDate int64      `json:"first_submission_date"`
 			Exiftool            struct {
 				FileType string `json:"FileType"`
 			} `json:"exiftool"`
 			LastAnalysisResults map[string]map[string]string `json:"last_analysis_results"`
 		} `json:"attributes"`
 		ContextAttributes struct {
-			NotificationDate int `json:"notification_date"`
+			NotificationDate int64 `json:"notification_date"`
 		} `json:"context_attributes"`
 		ID string `json:"id"`
 	} `json:"data"`
@@ -35,9 +35,9 @@ type VirustotalResult struct {
 }
 
 func LiveHunting(repo repository.IocRepo) {
+	loc, _ := time.LoadLocation("Europe/London")
 	existsSample := repo.ExistsIndex(model.IndexNameSample)
 	if !existsSample {
-		fmt.Println("not exit")
 		repo.CreateIndex(model.IndexNameSample, model.MappingSample)
 	}
 	sampleList := make([]model.Sample, 0)
@@ -61,20 +61,22 @@ func LiveHunting(repo repository.IocRepo) {
 						Sha1:             item.Attributes.Sha1,
 						Md5:              item.Attributes.Md5,
 						Tags:             item.Attributes.Tags,
-						FirstSubmit:      item.Attributes.FirstSubmissionDate,
-						NotificationDate: item.ContextAttributes.NotificationDate,
+						FirstSubmit:      strings.Replace(time.Unix(item.Attributes.FirstSubmissionDate, 0).In(loc).Format(time.RFC3339), "Z", "", -1),
+						NotificationDate: strings.Replace(time.Unix(item.ContextAttributes.NotificationDate, 0).In(loc).Format(time.RFC3339), "Z", "", -1),
 						FileType:         item.Attributes.Exiftool.FileType,
 						EnginesDetected:  virustotalResult.enginesDetected(i),
 						Detected:         len(virustotalResult.enginesDetected(i)),
 						Point:            virustotalResult.enginesPoint(i),
-						CrawledTime:      time.Now().Format(time.RFC3339),
+						CrawledTime:      strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 					}
 					//fmt.Println("sample->", sample)
 					sampleList = append(sampleList, sample)
+					//sampleBytes, _ := json.Marshal(sample)
 					existsID := repo.ExistsDoc(model.IndexNameSample, sample.Sha256)
 					if existsID {
 						break
 					} else {
+						//helper.Publish("virustotal-test", sampleBytes)
 						success := repo.InsertIndex(model.IndexNameSample, sample.Sha256, sample)
 						if !success {
 							return
@@ -246,25 +248,4 @@ func (vr VirustotalResult) enginesDetected(i int) []string {
 // Tính điểm engines
 func (vr VirustotalResult) enginesPoint(i int) int {
 	return point(vr.enginesDetected(i))
-}
-
-type VirustotalProcess struct {
-	sample     model.Sample
-	iocRepo  repository.IocRepo
-}
-
-func (process *VirustotalProcess) Process() {
-	existsSample := process.iocRepo.ExistsIndex(model.IndexNameSample)
-	if !existsSample {
-		process.iocRepo.CreateIndex(model.IndexNameSample, model.MappingSample)
-	}
-	existsID := process.iocRepo.ExistsDoc(model.IndexNameSample, process.sample.Sha256)
-	if existsID {
-		return
-	} else {
-		success := process.iocRepo.InsertIndex(model.IndexNameSample, process.sample.Sha256, process.sample)
-		if !success {
-			return
-		}
-	}
 }
