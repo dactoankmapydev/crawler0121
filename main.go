@@ -53,11 +53,19 @@ func main() {
 	// time start crawler
 	//crawler.GetAllDataSubscribed(iocHandler.IocRepo)
 	//crawler.LiveHunting(iocHandler.IocRepo)
-	//crawler.MirrorPost(iocHandler.IocRepo)
-	crawler.Subscribed(iocHandler.IocRepo)
+
+	//go crawler.Subscribed(iocHandler.IocRepo)
+	//go crawler.MirrorPost(iocHandler.IocRepo)
+	//crawler.LiveHunting(iocHandler.IocRepo)
+	//crawler.Subscribed(iocHandler.IocRepo)
+	crawler.Subscribed1(iocHandler.IocRepo)
 
 	// schedule crawler
-	schedule(10*time.Second, iocHandler, 1)
+	//go schedule(1*time.Minute, iocHandler, 1)
+	//go schedule(1*time.Minute, iocHandler, 2)
+	//schedule(1*time.Minute, iocHandler, 3)
+
+	schedule(1*time.Second, iocHandler, 1)
 }
 
 func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
@@ -65,14 +73,16 @@ func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
 	func() {
 		for {
 			switch crowIlnndex {
-
 			case 1:
 				<-ticker.C
-				//fmt.Println("2")
-				//crawler.GetAllDataSubscribed(handler.IocRepo)
-				//crawler.LiveHunting(handler.IocRepo)
-				//crawler.MirrorPost(handler.IocRepo)
-				crawler.SubscribedAfter(handler.IocRepo)
+				//crawler.SubscribedAfter(handler.IocRepo)
+				crawler.SubscribedAfter1(handler.IocRepo)
+			//case 2:
+			//	<-ticker.C
+			//	crawler.MirrorPost(handler.IocRepo)
+			//case 3:
+			//	<-ticker.C
+			//	crawler.LiveHunting(handler.IocRepo)
 			}
 		}
 	}()
