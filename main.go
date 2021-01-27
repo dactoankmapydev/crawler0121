@@ -72,7 +72,7 @@ func schedule(timeSchedule time.Duration, handler IocHandler, crowIlnndex int) {
 				//crawler.GetAllDataSubscribed(handler.IocRepo)
 				//crawler.LiveHunting(handler.IocRepo)
 				//crawler.MirrorPost(handler.IocRepo)
-				crawler.Subscribed(handler.IocRepo)
+				crawler.SubscribedAfter(handler.IocRepo)
 			}
 		}
 	}()
