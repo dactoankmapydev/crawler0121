@@ -1,0 +1,203 @@
+package crawler
+
+import (
+	"encoding/json"
+	"fmt"
+	"ioc-provider/handler"
+	"ioc-provider/helper"
+	"ioc-provider/model"
+	"ioc-provider/repository"
+	"math"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type Scraper struct {
+	url string
+	repo    repository.IocRepo
+}
+
+func TotalPages() int {
+	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50")
+	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
+	checkError(err)
+	var data Data
+	json.Unmarshal(body, &data)
+	countPost := data.Count
+	totalPage := math.Ceil(float64(countPost) / float64(50))
+	fmt.Println("totalPage->", int(totalPage))
+	return int(totalPage)
+}
+
+func AllLink() []string {
+	links := make([]string, 0)
+	totalPage := TotalPages()
+	if totalPage > 0 {
+		for page := 1; page <= totalPage; page++ {
+			pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&page=%d", page)
+			links = append(links, pathAPI)
+		}
+	}
+	return links
+}
+
+func OnePage(pathAPI string) ([]model.Post, []model.Indicators) {
+	loc, _ := time.LoadLocation("Europe/London")
+	postList := make([]model.Post, 0)
+	iocList := make([]model.Indicators, 0)
+	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
+	checkError(err)
+	var data Data
+	json.Unmarshal(body, &data)
+
+	trustType := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5", "URL", "URI", "hostname", "domain", "IPv6", "IPv4", "BitcoinAddress"}
+	sample := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5"}
+	url := []string{"URL", "URI"}
+	domain := []string{"hostname", "domain"}
+	ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
+
+	for _, item := range data.Results {
+
+		post := model.Post{
+			ID:                item.ID,
+			Name:              item.Name,
+			Description:       item.Description,
+			AuthorName:        item.AuthorName,
+			Modified:          item.Modified,
+			Created:           item.Created,
+			Tags:              item.Tags,
+			TargetedCountries: item.TargetedCountries,
+			MalwareFamilies:   item.MalwareFamilies,
+			AttackIds:         item.AttackIds,
+			Industries:        item.Industries,
+			References:        item.References,
+			CrawledTime:       strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
+		}
+		postList = append(postList, post)
+		//fmt.Println("post->", post)
+
+		for _, value := range item.Indicators {
+			_, foundType := Find(trustType, value.Type)
+			if foundType {
+				_, foundSample := Find(sample, value.Type)
+				if foundSample {
+					value.Type = "sample"
+				}
+
+				_, foundUrl := Find(url, value.Type)
+				if foundUrl {
+					value.Type = "url"
+				}
+
+				_, foundDomain := Find(domain, value.Type)
+				if foundDomain {
+					value.Type = "domain"
+				}
+
+				_, foundIpaddress := Find(ipaddress, value.Type)
+				if foundIpaddress {
+					value.Type = "ipaddress"
+				}
+				indicator := model.Indicators{
+					//IocID:       strconv.FormatInt(value.IocID, 10),
+					IocID:       strconv.Itoa(value.ID),
+					Ioc:         value.Indicator,
+					IocType:     value.Type,
+					CreatedTime: value.Created,
+					CrawledTime: strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
+					Source:      "otx",
+					Category:    item.Tags,
+					PostID:      item.ID,
+				}
+				iocList = append(iocList, indicator)
+				//fmt.Println("indicator->", indicator)
+			}
+
+
+		}
+	}
+	return postList, iocList
+}
+
+var queue = make(chan string)
+
+func crawlURL(url string, repo repository.IocRepo) {
+	links := Links()
+	postList, iocList := OnePage(url)
+
+	existsPost := repo.ExistsIndex(model.IndexNamePost)
+	if !existsPost {
+		repo.CreateIndex(model.IndexNamePost, model.MappingPost)
+	}
+
+	existsIoc := repo.ExistsIndex(model.IndexNameIoc)
+	if !existsIoc {
+		repo.CreateIndex(model.IndexNameIoc, model.MappingIoc)
+	}
+
+	for _, post := range postList {
+		onePost := model.Post{
+			ID:                post.ID,
+			Name:              post.Name,
+			Description:       post.Description,
+			AuthorName:        post.AuthorName,
+			Modified:          post.Modified,
+			Created:           post.Created,
+			Tags:              post.Tags,
+			TargetedCountries: post.TargetedCountries,
+			Industries:        post.Industries,
+			MalwareFamilies:   post.MalwareFamilies,
+			AttackIds:         post.AttackIds,
+			References:        post.References,
+			CrawledTime:       post.CrawledTime,
+		}
+		existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
+		if existsIdPost {
+			fmt.Println("existsIdPost", helper.Hash(post.ID, post.Modified))
+		} else {
+			success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), onePost)
+			if !success {
+				fmt.Println(success)
+			}
+		}
+	}
+
+	for _, ioc := range iocList {
+		oneIoc := model.Indicators{
+			IocID:       ioc.IocID,
+			Ioc:         ioc.Ioc,
+			IocType:     ioc.IocType,
+			CreatedTime: ioc.CreatedTime,
+			CrawledTime: ioc.CrawledTime,
+			Source:      "otx",
+			Category:    ioc.Category,
+			PostID:      ioc.PostID,
+		}
+		existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime))
+		if existsIdIoc {
+			fmt.Println("existsIdIoc", helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime))
+			break
+		} else {
+			success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime), oneIoc)
+			if !success {
+				fmt.Println(success)
+			}
+		}
+	}
+
+	for _, link := range links {
+		go func(l string) {
+			queue <- l
+		}(link)
+	}
+}
+
+func worker(wg *sync.WaitGroup) {
+	for link := range queue {
+		crawlURL(link, handler.IocHandler{}.IocRepo)
+	}
+	wg.Done()
+}
+
