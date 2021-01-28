@@ -282,21 +282,21 @@ func SubscribedAfter1(repo repository.IocRepo) {
 	lastTimeModifiedFirst := time.Unix(maxTimestampModifiedFirst, 0).In(loc).Format(time.RFC3339)
 	fmt.Println("last time modified->", lastTimeModifiedFirst)
 
-	modifiedSince := []string{lastTimeModifiedFirst}
-	if len(modifiedSince) > 0 {
-		pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=%s", modifiedSince[0])
-		body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
-		checkError1(err)
-		var data Data1
-		json.Unmarshal(body, &data)
+	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=%s", lastTimeModifiedFirst)
+	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
+	checkError1(err)
+	var data Data1
+	json.Unmarshal(body, &data)
+	countPost := data.Count
 
-		trustType := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5", "URL", "URI", "hostname", "domain", "IPv6", "IPv4", "BitcoinAddress"}
-		sample := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5"}
-		url := []string{"URL", "URI"}
-		domain := []string{"hostname", "domain"}
-		ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
-		modifiedList := make([]int64, 0)
+	trustType := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5", "URL", "URI", "hostname", "domain", "IPv6", "IPv4", "BitcoinAddress"}
+	sample := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5"}
+	url := []string{"URL", "URI"}
+	domain := []string{"hostname", "domain"}
+	ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
+	modifiedList := make([]int64, 0)
 
+	if countPost != 0 {
 		for _, item := range data.Results1 {
 			post := model.Post{
 				ID:                item.ID,
@@ -321,8 +321,8 @@ func SubscribedAfter1(repo repository.IocRepo) {
 			} else {
 				success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
 				if !success {
-						return
-					}
+					return
+				}
 			}
 			for _, value := range item.Indicators1 {
 
@@ -368,17 +368,18 @@ func SubscribedAfter1(repo repository.IocRepo) {
 
 						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID, indicator.CrawledTime), indicator)
 						if !success {
-								return
-							}
+							return
+						}
 					}
 				}
 			}
 		}
-		maxTimestampModified := getLastTimeModified(modifiedList)
-		lastTimeModified := time.Unix(maxTimestampModified, 0).In(loc).Format(time.RFC3339)
-		fmt.Println("last time modified->", lastTimeModified)
-		modifiedSince[0] = lastTimeModified
+	} else {
+		fmt.Println("Not pulse new")
 	}
+	maxTimestampModified := getLastTimeModified(modifiedList)
+	lastTimeModified := time.Unix(maxTimestampModified, 0).In(loc).Format(time.RFC3339)
+	fmt.Println("last time modified->", lastTimeModified)
 }
 
 func Find1(slice []string, val string) (int, bool) {
