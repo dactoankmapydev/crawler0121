@@ -5,18 +5,21 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"ioc-provider/helper"
 	"ioc-provider/model"
+	"ioc-provider/repository"
 	"strings"
+	"sync"
 	"time"
 )
 
+const urlBase = "https://mirror-h.org/archive"
+
 // Scraper for each website
 type Scraper struct {
-	url string
 	doc *goquery.Document
 }
 
-func NewScraper(url string) *Scraper {
-	response, err := helper.HttpClient.GetMirrorWithRetries(url)
+func NewScraper() *Scraper {
+	response, err := helper.HttpClient.GetMirrorWithRetries(urlBase)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -29,39 +32,14 @@ func NewScraper(url string) *Scraper {
 	}
 
 	return &Scraper{
-		url: url,
 		doc: doc,
 	}
 }
 
-func (s *Scraper) ParserHtml() {
-	loc, _ := time.LoadLocation("Europe/London")
-	compromises := make([]model.Compromised, 0)
-	s.doc.Find("table tbody").Each(func(index int, tableHtml *goquery.Selection) {
-		var mirrorPost model.Compromised
-		tableHtml.Find("tr").Each(func(indexTr int, rowHtml *goquery.Selection) {
-			row := make([]string, 0)
-			rowHtml.Find("td").Each(func(ndexTd int, tableCell *goquery.Selection) {
-				row = append(row, tableCell.Text())
-			})
-			mirrorPost.HostName = row[0]
-			mirrorPost.Country = strings.Replace(strings.Replace(strings.TrimSpace(row[1]), "(", "", -1), ")", "", -1)
-			mirrorPost.UID = row[2]
-			mirrorPost.Src = row[3]
-			mirrorPost.CreationDate = convertUTCTime(row[4])
-			mirrorPost.TimeStamp = convertTimestamp(row[4])
-			mirrorPost.VictimHash = helper.Hash(mirrorPost.TimeStamp, mirrorPost.UID, mirrorPost.HostName)
-			mirrorPost.CrawledTime = time.Now().In(loc).Format(time.RFC3339)
-			compromises = append(compromises, mirrorPost)
-		})
-	})
-}
-
 func (s *Scraper) buildLink(href string) string {
 	var link string
-
 	if strings.HasPrefix(href, "/") {
-		link = strings.Join([]string{s.url, href}, "")
+		link = strings.Join([]string{urlBase, href}, "")
 	} else {
 		link = href
 	}
@@ -91,4 +69,66 @@ func (s *Scraper) Links() []string {
 	})
 
 	return links
+}
+
+func (s *Scraper) MetaDataInformation() []model.Compromised {
+	loc, _ := time.LoadLocation("Europe/London")
+	compromises := make([]model.Compromised, 0)
+	s.doc.Find("table tbody").Each(func(index int, tableHtml *goquery.Selection) {
+		var mirrorPost model.Compromised
+		tableHtml.Find("tr").Each(func(indexTr int, rowHtml *goquery.Selection) {
+			row := make([]string, 0)
+			rowHtml.Find("td").Each(func(ndexTd int, tableCell *goquery.Selection) {
+				row = append(row, tableCell.Text())
+			})
+			mirrorPost.HostName = row[0]
+			mirrorPost.Country = strings.Replace(strings.Replace(strings.TrimSpace(row[1]), "(", "", -1), ")", "", -1)
+			mirrorPost.UID = row[2]
+			mirrorPost.Src = row[3]
+			mirrorPost.CreationDate = convertUTCTime(row[4])
+			mirrorPost.TimeStamp = convertTimestamp(row[4])
+			mirrorPost.VictimHash = helper.Hash(mirrorPost.TimeStamp, mirrorPost.UID, mirrorPost.HostName)
+			mirrorPost.CrawledTime = time.Now().In(loc).Format(time.RFC3339)
+			compromises = append(compromises, mirrorPost)
+		})
+	})
+	return compromises
+}
+
+var queue = make(chan string)
+
+func CrawlMirror(repo repository.IocRepo) {
+	s := NewScraper()
+	if s == nil {
+		return
+	}
+	links := s.Links()
+	compromisesList := s.MetaDataInformation()
+
+	existsIndex := repo.ExistsIndex(model.IndexNameCompromised)
+	if !existsIndex {
+		repo.CreateIndex(model.IndexNameCompromised, model.MappingCompromised)
+	}
+
+	for _, compromises := range compromisesList {
+		existsID := repo.ExistsDoc(model.IndexNameCompromised, compromises.VictimHash)
+		if !existsID {
+			success := repo.InsertIndex(model.IndexNameCompromised, compromises.VictimHash, compromises)
+			if !success {
+				return
+			}
+		}
+	}
+
+	for _, link := range links {
+		go func(l string) {
+			queue <- l
+		}(link)
+	}
+}
+
+func worker(wg *sync.WaitGroup) {
+	for link := range queue {
+		CrawlMirror()
+	}
 }
