@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/sync/errgroup"
-	"ioc/helper"
-	"ioc/model"
-	"ioc/repository"
+	"ioc-provider/helper"
+	"ioc-provider/model"
+	"ioc-provider/repository"
 	"log"
 	"math"
 	"strconv"
@@ -14,19 +14,19 @@ import (
 	"time"
 )
 
-type Data1 struct {
-	Results1 []Results1 `json:"results"`
+type Data struct {
+	Results []Results `json:"results"`
 	Count   int       `json:"count"`
 }
 
-type Results1 struct {
+type Results struct {
 	ID                string       `json:"id"`
 	Name              string       `json:"name"`
 	Description       string       `json:"description"`
 	AuthorName        string       `json:"author_name"`
 	Modified          string       `json:"modified"`
 	Created           string       `json:"created"`
-	Indicators1        []Indicators1 `json:"indicators"`
+	Indicators        []Indicators `json:"indicators"`
 	Tags              []string     `json:"tags"`
 	TargetedCountries []string     `json:"targeted_countries"`
 	MalwareFamilies   []string     `json:"malware_families"`
@@ -35,27 +35,27 @@ type Results1 struct {
 	Industries        []string     `json:"industries"`
 }
 
-type Indicators1 struct {
+type Indicators struct {
 	ID        int  `json:"id"`
 	Indicator string `json:"indicator"`
 	Type      string `json:"type"`
 	Created   string `json:"created"`
 }
 
-func checkError1(err error) {
+func checkError(err error) {
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func GetAllTimeModified() []int64 {
+func getAllTimeModified() []int64 {
 	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=2019-01-01T00:00:00")
 	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
-	checkError1(err)
-	var data Data1
+	checkError(err)
+	var data Data
 	json.Unmarshal(body, &data)
 	modifiedList := make([]int64, 0)
-	for _, item := range data.Results1 {
+	for _, item := range data.Results {
 		post := model.Post {
 			Modified:          item.Modified,
 		}
@@ -80,12 +80,12 @@ func utcToTimestamp(strTime string) int64 {
 	return t.Unix()
 }
 
-func TotalPage1() int {
+func TotalPage() int {
 	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=2019-01-01T00:00:00")
 	fmt.Println("pathAPI->", pathAPI)
 	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
-	checkError1(err)
-	var data Data1
+	checkError(err)
+	var data Data
 	json.Unmarshal(body, &data)
 	countPost := data.Count
 	totalPage := math.Ceil(float64(countPost) / float64(50))
@@ -98,8 +98,8 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 	postList := make([]model.Post, 0)
 	iocList := make([]model.Indicators, 0)
 	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
-	checkError1(err)
-	var data Data1
+	checkError(err)
+	var data Data
 	json.Unmarshal(body, &data)
 
 	trustType := []string{"FileHash-MD5", "FileHash-PEHASH", "FileHash-SHA256", "FileHash-SHA1", "FileHash-IMPHASH", "FileHash-MD5", "URL", "URI", "hostname", "domain", "IPv6", "IPv4", "BitcoinAddress"}
@@ -108,8 +108,7 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 	domain := []string{"hostname", "domain"}
 	ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
 
-	for _, item := range data.Results1 {
-
+	for _, item := range data.Results {
 		post := model.Post{
 			ID:                item.ID,
 			Name:              item.Name,
@@ -126,32 +125,30 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 			CrawledTime:       strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 		}
 		postList = append(postList, post)
-		//fmt.Println("post->", post)
 
-		for _, value := range item.Indicators1 {
-			_, foundType := Find1(trustType, value.Type)
+		for _, value := range item.Indicators {
+			_, foundType := Find(trustType, value.Type)
 			if foundType {
-				_, foundSample := Find1(sample, value.Type)
+				_, foundSample := Find(sample, value.Type)
 				if foundSample {
 					value.Type = "sample"
 				}
 
-				_, foundUrl := Find1(url, value.Type)
+				_, foundUrl := Find(url, value.Type)
 				if foundUrl {
 					value.Type = "url"
 				}
 
-				_, foundDomain := Find1(domain, value.Type)
+				_, foundDomain := Find(domain, value.Type)
 				if foundDomain {
 					value.Type = "domain"
 				}
 
-				_, foundIpaddress := Find1(ipaddress, value.Type)
+				_, foundIpaddress := Find(ipaddress, value.Type)
 				if foundIpaddress {
 					value.Type = "ipaddress"
 				}
 				indicator := model.Indicators{
-					//IocID:       strconv.FormatInt(value.IocID, 10),
 					IocID:       strconv.Itoa(value.ID),
 					Ioc:         value.Indicator,
 					IocType:     value.Type,
@@ -162,16 +159,13 @@ func getDataOnePage(pathAPI string) ([]model.Post, []model.Indicators, error) {
 					PostID:      item.ID,
 				}
 				iocList = append(iocList, indicator)
-				//fmt.Println("indicator->", indicator)
 			}
-
-
 		}
 	}
 	return postList, iocList, nil
 }
 
-func Subscribed1(repo repository.IocRepo) {
+func Subscribed(repo repository.IocRepo) {
 	eg := errgroup.Group{}
 	existsPost := repo.ExistsIndex(model.IndexNamePost)
 	if !existsPost {
@@ -183,109 +177,66 @@ func Subscribed1(repo repository.IocRepo) {
 		repo.CreateIndex(model.IndexNameIoc, model.MappingIoc)
 	}
 
-	totalPage := TotalPage1()
+	totalPage := TotalPage()
 	var totalPost int = 0
 	var totalIoc int = 0
-	posts := make([]model.Post, 0)
-	iocs := make([]model.Indicators, 0)
-	//posts := []model.Post{}
-	//iocs := []model.Indicators{}
 
 	if totalPage > 0 {
 		for page := 1; page <= totalPage; page++ {
 			pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=2019-01-01T00:00:00&page=%d", page)
 			eg.Go(func() error {
 				postList, iocList, err := getDataOnePage(pathAPI)
-				checkError1(err)
+				checkError(err)
 				totalPost += len(postList)
 				totalIoc += len(iocList)
 
 				for _, post := range postList {
-					onePost := model.Post{
-						ID:                post.ID,
-						Name:              post.Name,
-						Description:       post.Description,
-						AuthorName:        post.AuthorName,
-						Modified:          post.Modified,
-						Created:           post.Created,
-						Tags:              post.Tags,
-						TargetedCountries: post.TargetedCountries,
-						Industries:        post.Industries,
-						MalwareFamilies:   post.MalwareFamilies,
-						AttackIds:         post.AttackIds,
-						References:        post.References,
-						CrawledTime:       post.CrawledTime,
-					}
-					//fmt.Println(onePost)
-					posts = append(posts, onePost)
 					existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
-					if existsIdPost {
-						fmt.Println("existsIdPost", helper.Hash(post.ID, post.Modified))
-					} else {
+					if !existsIdPost {
 						success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
 						if !success {
-							fmt.Println(success)
+							return nil
 						}
 					}
 				}
 
 				for _, ioc := range iocList {
-					oneIoc := model.Indicators{
-						IocID:       ioc.IocID,
-						Ioc:         ioc.Ioc,
-						IocType:     ioc.IocType,
-						CreatedTime: ioc.CreatedTime,
-						CrawledTime: ioc.CrawledTime,
-						Source:      "otx",
-						Category:    ioc.Category,
-						PostID:      ioc.PostID,
-					}
-					//fmt.Println(oneIoc)
-					iocs = append(iocs, oneIoc)
-					existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime))
-					if existsIdIoc {
-						fmt.Println("existsIdIoc", helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime))
-						break
-					} else {
-						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(oneIoc.IocID, oneIoc.PostID, oneIoc.CrawledTime), oneIoc)
+					existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(ioc.IocID, ioc.PostID))
+					if !existsIdIoc {
+						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(ioc.IocID, ioc.PostID), ioc)
 						if !success {
-							fmt.Println(success)
+							return nil
 						}
 					}
 				}
 				return nil
 			})
 		}
-		//err := eg.Wait()
-		//checkError(err)
 		if err := eg.Wait(); err != nil {
 			return
 		}
 	}
-	fmt.Println("len postList:", len(posts))
-	fmt.Println("len iocList:", len(iocs))
-	fmt.Println("-----------------------------")
 	fmt.Println("total post:", totalPost)
 	fmt.Println("total ioc:", totalIoc)
 }
 
-func SubscribedAfter1(repo repository.IocRepo) {
+func SubscribedAfter(repo repository.IocRepo) {
 	loc, _ := time.LoadLocation("Europe/London")
 	postList := make([]model.Post, 0)
 	iocList := make([]model.Indicators, 0)
 
-	modifiedListFirst := GetAllTimeModified()
+	modifiedList := getAllTimeModified()
 
-	maxTimestampModifiedFirst := getLastTimeModified(modifiedListFirst)
+	maxTimestampModified := getLastTimeModified(modifiedList)
 
 	// convert timestamp to utc
-	lastTimeModifiedFirst := time.Unix(maxTimestampModifiedFirst, 0).In(loc).Format(time.RFC3339)
-	fmt.Println("last time modified->", lastTimeModifiedFirst)
+	lastTimeModified := time.Unix(maxTimestampModified, 0).In(loc).Format(time.RFC3339)
+	fmt.Println("last time modified->", lastTimeModified)
 
-	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=%s", lastTimeModifiedFirst)
+	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=%s", lastTimeModified)
 	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
-	checkError1(err)
-	var data Data1
+	checkError(err)
+	var data Data
 	json.Unmarshal(body, &data)
 	countPost := data.Count
 
@@ -294,10 +245,9 @@ func SubscribedAfter1(repo repository.IocRepo) {
 	url := []string{"URL", "URI"}
 	domain := []string{"hostname", "domain"}
 	ipaddress := []string{"IPv6", "IPv4", "BitcoinAddress"}
-	modifiedList := make([]int64, 0)
 
 	if countPost != 0 {
-		for _, item := range data.Results1 {
+		for _, item := range data.Results {
 			post := model.Post{
 				ID:                item.ID,
 				Name:              item.Name,
@@ -316,39 +266,36 @@ func SubscribedAfter1(repo repository.IocRepo) {
 			modifiedList = append(modifiedList, utcToTimestamp(post.Modified))
 			postList = append(postList, post)
 			existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
-			if existsIdPost {
-				fmt.Println("existsIdPost", helper.Hash(post.ID, post.Modified))
-			} else {
+			if !existsIdPost {
 				success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
 				if !success {
 					return
 				}
 			}
-			for _, value := range item.Indicators1 {
 
-				_, foundType := Find1(trustType, value.Type)
+			for _, value := range item.Indicators {
+				_, foundType := Find(trustType, value.Type)
 				if foundType {
-					_, foundSample := Find1(sample, value.Type)
+					_, foundSample := Find(sample, value.Type)
 					if foundSample {
 						value.Type = "sample"
 					}
 
-					_, foundUrl := Find1(url, value.Type)
+					_, foundUrl := Find(url, value.Type)
 					if foundUrl {
 						value.Type = "url"
 					}
 
-					_, foundDomain := Find1(domain, value.Type)
+					_, foundDomain := Find(domain, value.Type)
 					if foundDomain {
 						value.Type = "domain"
 					}
 
-					_, foundIpaddress := Find1(ipaddress, value.Type)
+					_, foundIpaddress := Find(ipaddress, value.Type)
 					if foundIpaddress {
 						value.Type = "ipaddress"
 					}
 					indicator := model.Indicators{
-						//IocID:       strconv.FormatInt(value.IocID, 10),
 						IocID:       strconv.Itoa(value.ID),
 						Ioc:         value.Indicator,
 						IocType:     value.Type,
@@ -360,13 +307,9 @@ func SubscribedAfter1(repo repository.IocRepo) {
 					}
 
 					iocList = append(iocList, indicator)
-					existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID, indicator.CrawledTime))
-					if existsIdIoc {
-						fmt.Println("existsIdIoc", helper.Hash(indicator.IocID, indicator.PostID, indicator.CrawledTime))
-						break
-					} else {
-
-						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID, indicator.CrawledTime), indicator)
+					existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID))
+					if !existsIdIoc {
+						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID), indicator)
 						if !success {
 							return
 						}
@@ -377,12 +320,11 @@ func SubscribedAfter1(repo repository.IocRepo) {
 	} else {
 		fmt.Println("Not pulse new")
 	}
-	maxTimestampModified := getLastTimeModified(modifiedList)
-	lastTimeModified := time.Unix(maxTimestampModified, 0).In(loc).Format(time.RFC3339)
-	fmt.Println("last time modified->", lastTimeModified)
+	fmt.Sprintf("len postList update",  len(postList))
+	fmt.Sprintf("len postList update", len(iocList))
 }
 
-func Find1(slice []string, val string) (int, bool) {
+func Find(slice []string, val string) (int, bool) {
 	for i, item := range slice {
 		if item == val {
 			return i, true
@@ -390,3 +332,5 @@ func Find1(slice []string, val string) (int, bool) {
 	}
 	return -1, false
 }
+
+
