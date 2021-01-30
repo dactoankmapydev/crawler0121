@@ -191,23 +191,33 @@ func Subscribed(repo repository.IocRepo) {
 				totalPost += len(postList)
 				totalIoc += len(iocList)
 
-				queue := helper.NewJobQueue(5*runtime.NumCPU())
+				queue := helper.NewJobQueue(runtime.NumCPU())
 				queue.Start()
 				defer queue.Stop()
 
-				for _, post := range postList {
-					queue.Submit(&OtxProcess{
-						post: post,
-						iocRepo: repo,
-					})
-				}
+				queue.Submit(&OtxProcess{
+					postList: postList,
+					iocRepo: repo,
+				})
 
-				for _, ioc := range iocList {
-					queue.Submit(&OtxProcess{
-						ioc: ioc,
-						iocRepo: repo,
-					})
-				}
+				queue.Submit(&OtxProcess{
+					iocList: iocList,
+					iocRepo: repo,
+				})
+
+				//for _, post := range postList {
+				//	queue.Submit(&OtxProcess{
+				//		post: post,
+				//		iocRepo: repo,
+				//	})
+				//}
+
+				//for _, ioc := range iocList {
+				//	queue.Submit(&OtxProcess{
+				//		ioc: ioc,
+				//		iocRepo: repo,
+				//	})
+				//}
 
 				return nil
 			})
@@ -266,16 +276,21 @@ func SubscribedAfter(repo repository.IocRepo) {
 			modifiedList = append(modifiedList, utcToTimestamp(post.Modified))
 			postList = append(postList, post)
 
-			queue := helper.NewJobQueue(5*runtime.NumCPU())
+			queue := helper.NewJobQueue(runtime.NumCPU())
 			queue.Start()
 			defer queue.Stop()
 
-			for _, post := range postList {
-				queue.Submit(&OtxProcess{
-					post: post,
-					iocRepo: repo,
-				})
-			}
+			queue.Submit(&OtxProcess{
+				postList: postList,
+				iocRepo: repo,
+			})
+
+			//for _, post := range postList {
+			//	queue.Submit(&OtxProcess{
+			//		post: post,
+			//		iocRepo: repo,
+			//	})
+			//}
 
 			for _, value := range item.Indicators {
 				_, foundType := Find(trustType, value.Type)
@@ -311,13 +326,17 @@ func SubscribedAfter(repo repository.IocRepo) {
 					}
 
 					iocList = append(iocList, indicator)
+					queue.Submit(&OtxProcess{
+						iocList: iocList,
+						iocRepo: repo,
+					})
 
-					for _, ioc := range iocList {
-						queue.Submit(&OtxProcess{
-							ioc: ioc,
-							iocRepo: repo,
-						})
-					}
+					//for _, ioc := range iocList {
+					//	queue.Submit(&OtxProcess{
+					//		ioc: ioc,
+					//		iocRepo: repo,
+					//	})
+					//}
 				}
 			}
 		}
@@ -338,8 +357,11 @@ func Find(slice []string, val string) (int, bool) {
 }
 
 type OtxProcess struct {
-	post     model.Post
-	ioc      model.Indicators
+	//post     model.Post
+	postList     []model.Post
+	//ioc      model.Indicators
+	iocList      []model.Indicators
+	//url      string
 	iocRepo  repository.IocRepo
 }
 
@@ -354,17 +376,21 @@ func (process *OtxProcess) Process() {
 		process.iocRepo.CreateIndex(model.IndexNameIoc, model.MappingIoc)
 	}
 
-	existsIdPost := process.iocRepo.ExistsDoc(model.IndexNamePost, helper.Hash(process.post.ID, process.post.Modified))
+	//existsIdPost := process.iocRepo.ExistsDoc(model.IndexNamePost, helper.Hash(process.post.ID, process.post.Modified))
+	existsIdPost := process.iocRepo.ExistsDocPost(model.IndexNamePost, process.postList)
 	if !existsIdPost {
-		success := process.iocRepo.InsertIndex(model.IndexNamePost, helper.Hash(process.post.ID, process.post.Modified), process.post)
+		//success := process.iocRepo.InsertIndex(model.IndexNamePost, helper.Hash(process.post.ID, process.post.Modified), process.post)
+		success := process.iocRepo.InsertManyIndexPost(model.IndexNamePost, process.postList)
 		if !success {
 			return
 		}
 	}
 
-	existsIdIoc := process.iocRepo.ExistsDoc(model.IndexNameIoc, helper.Hash(process.ioc.IocID, process.ioc.PostID))
+	//existsIdIoc := process.iocRepo.ExistsDoc(model.IndexNameIoc, helper.Hash(process.ioc.IocID, process.ioc.PostID))
+	existsIdIoc := process.iocRepo.ExistsDocIoc(model.IndexNameIoc, process.iocList)
 	if !existsIdIoc {
-		success := process.iocRepo.InsertIndex(model.IndexNameIoc, helper.Hash(process.ioc.IocID, process.ioc.PostID), process.ioc)
+		//success := process.iocRepo.InsertIndex(model.IndexNameIoc, helper.Hash(process.ioc.IocID, process.ioc.PostID), process.ioc)
+		success := process.iocRepo.InsertManyIndexIoc(model.IndexNameIoc, process.iocList)
 		if !success {
 			return
 		}
