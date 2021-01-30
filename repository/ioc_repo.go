@@ -8,6 +8,9 @@ type IocRepo interface {
 	InsertIndex(indexName, id string, doc interface{}) bool
 	ExistsDoc(indexName, id string) bool
 
-	InsertManyIndexIoc(indexName, id string, docs []model.Indicators) bool
-	InsertManyIndexPost(indexName, id string, docs []model.Post) bool
+	ExistsDocIoc(indexName string, docs []model.Indicators) bool
+	ExistsDocPost(indexName string, docs []model.Post) bool
+
+	InsertManyIndexIoc(indexName string, docs []model.Indicators) bool
+	InsertManyIndexPost(indexName string, docs []model.Post) bool
 }
