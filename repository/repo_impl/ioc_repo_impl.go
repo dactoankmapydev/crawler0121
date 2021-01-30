@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/olivere/elastic/v7"
 	"ioc-provider/db"
+	"ioc-provider/helper"
 	"ioc-provider/model"
 	"ioc-provider/repository"
 	"log"
@@ -49,10 +50,10 @@ func (ioc IocRepoImpl) InsertIndex(indexName string, id string, doc interface{})
 	return true
 }
 
-func (ioc IocRepoImpl) InsertManyIndexIoc(indexName, id string, docs []model.Indicators) bool {
+func (ioc IocRepoImpl) InsertManyIndexIoc(indexName string, docs []model.Indicators) bool {
 	bulkRequest := ioc.es.Client.Bulk()
 	for _, doc := range docs {
-		req := elastic.NewBulkIndexRequest().Index(indexName).Id(id).Doc(doc)
+		req := elastic.NewBulkIndexRequest().Index(indexName).Id(helper.Hash(doc.IocID, doc.PostID)).Doc(doc)
 		bulkRequest = bulkRequest.Add(req)
 	}
 	bulkResponse, err := bulkRequest.Do(context.Background())
@@ -65,10 +66,10 @@ func (ioc IocRepoImpl) InsertManyIndexIoc(indexName, id string, docs []model.Ind
 	return true
 }
 
-func (ioc IocRepoImpl) InsertManyIndexPost(indexName, id string, docs []model.Post) bool {
+func (ioc IocRepoImpl) InsertManyIndexPost(indexName string, docs []model.Post) bool {
 	bulkRequest := ioc.es.Client.Bulk()
 	for _, doc := range docs {
-		req := elastic.NewBulkIndexRequest().Index(indexName).Id(id).Doc(doc)
+		req := elastic.NewBulkIndexRequest().Index(indexName).Id(helper.Hash(doc.ID, doc.Modified)).Doc(doc)
 		bulkRequest = bulkRequest.Add(req)
 	}
 	bulkResponse, err := bulkRequest.Do(context.Background())
@@ -77,6 +78,32 @@ func (ioc IocRepoImpl) InsertManyIndexPost(indexName, id string, docs []model.Po
 	}
 	if bulkResponse != nil {
 
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) ExistsDocIoc(indexName string, docs []model.Indicators) bool {
+	for _, doc := range docs {
+		exists, err := ioc.es.Client.Exists().
+			Index(indexName).Id(helper.Hash(doc.IocID, doc.PostID)).
+			Do(context.Background())
+		if err != nil {
+			log.Println(err)
+		}
+		return exists
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) ExistsDocPost(indexName string, docs []model.Post) bool {
+	for _, doc := range docs {
+		exists, err := ioc.es.Client.Exists().
+			Index(indexName).Id(helper.Hash(doc.ID, doc.Modified)).
+			Do(context.Background())
+		if err != nil {
+			log.Println(err)
+		}
+		return exists
 	}
 	return true
 }
