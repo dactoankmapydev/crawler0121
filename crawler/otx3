@@ -9,6 +9,7 @@ import (
 	"ioc-provider/repository"
 	"log"
 	"math"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -190,25 +191,24 @@ func Subscribed(repo repository.IocRepo) {
 				totalPost += len(postList)
 				totalIoc += len(iocList)
 
+				queue := helper.NewJobQueue(5*runtime.NumCPU())
+				queue.Start()
+				defer queue.Stop()
+
 				for _, post := range postList {
-					existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
-					if !existsIdPost {
-						success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
-						if !success {
-							return nil
-						}
-					}
+					queue.Submit(&OtxProcess{
+						post: post,
+						iocRepo: repo,
+					})
 				}
 
 				for _, ioc := range iocList {
-					existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(ioc.IocID, ioc.PostID))
-					if !existsIdIoc {
-						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(ioc.IocID, ioc.PostID), ioc)
-						if !success {
-							return nil
-						}
-					}
+					queue.Submit(&OtxProcess{
+						ioc: ioc,
+						iocRepo: repo,
+					})
 				}
+
 				return nil
 			})
 		}
@@ -265,12 +265,16 @@ func SubscribedAfter(repo repository.IocRepo) {
 			}
 			modifiedList = append(modifiedList, utcToTimestamp(post.Modified))
 			postList = append(postList, post)
-			existsIdPost := repo.ExistsDoc(model.IndexNamePost, helper.Hash(post.ID, post.Modified))
-			if !existsIdPost {
-				success := repo.InsertIndex(model.IndexNamePost, helper.Hash(post.ID, post.Modified), post)
-				if !success {
-					return
-				}
+
+			queue := helper.NewJobQueue(5*runtime.NumCPU())
+			queue.Start()
+			defer queue.Stop()
+
+			for _, post := range postList {
+				queue.Submit(&OtxProcess{
+					post: post,
+					iocRepo: repo,
+				})
 			}
 
 			for _, value := range item.Indicators {
@@ -307,12 +311,12 @@ func SubscribedAfter(repo repository.IocRepo) {
 					}
 
 					iocList = append(iocList, indicator)
-					existsIdIoc := repo.ExistsDoc(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID))
-					if !existsIdIoc {
-						success := repo.InsertIndex(model.IndexNameIoc, helper.Hash(indicator.IocID, indicator.PostID), indicator)
-						if !success {
-							return
-						}
+
+					for _, ioc := range iocList {
+						queue.Submit(&OtxProcess{
+							ioc: ioc,
+							iocRepo: repo,
+						})
 					}
 				}
 			}
@@ -333,4 +337,36 @@ func Find(slice []string, val string) (int, bool) {
 	return -1, false
 }
 
+type OtxProcess struct {
+	post     model.Post
+	ioc      model.Indicators
+	iocRepo  repository.IocRepo
+}
 
+func (process *OtxProcess) Process() {
+	existsPost := process.iocRepo.ExistsIndex(model.IndexNamePost)
+	if !existsPost {
+		process.iocRepo.CreateIndex(model.IndexNamePost, model.MappingPost)
+	}
+
+	existsIoc := process.iocRepo.ExistsIndex(model.IndexNameIoc)
+	if !existsIoc {
+		process.iocRepo.CreateIndex(model.IndexNameIoc, model.MappingIoc)
+	}
+
+	existsIdPost := process.iocRepo.ExistsDoc(model.IndexNamePost, helper.Hash(process.post.ID, process.post.Modified))
+	if !existsIdPost {
+		success := process.iocRepo.InsertIndex(model.IndexNamePost, helper.Hash(process.post.ID, process.post.Modified), process.post)
+		if !success {
+			return
+		}
+	}
+
+	existsIdIoc := process.iocRepo.ExistsDoc(model.IndexNameIoc, helper.Hash(process.ioc.IocID, process.ioc.PostID))
+	if !existsIdIoc {
+		success := process.iocRepo.InsertIndex(model.IndexNameIoc, helper.Hash(process.ioc.IocID, process.ioc.PostID), process.ioc)
+		if !success {
+			return
+		}
+	}
+}
