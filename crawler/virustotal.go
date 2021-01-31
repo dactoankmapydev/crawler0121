@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"ioc-provider/helper"
+	"ioc-provider/helper/rabbit"
 	"ioc-provider/model"
 	"ioc-provider/repository"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -36,10 +38,6 @@ type VirustotalResult struct {
 
 func LiveHunting(repo repository.IocRepo) {
 	loc, _ := time.LoadLocation("Europe/London")
-	existsSample := repo.ExistsIndex(model.IndexNameSample)
-	if !existsSample {
-		repo.CreateIndex(model.IndexNameSample, model.MappingSample)
-	}
 	sampleList := make([]model.Sample, 0)
 	cursor := []string{""}
 	for len(cursor) > 0 {
@@ -69,18 +67,17 @@ func LiveHunting(repo repository.IocRepo) {
 						Point:            virustotalResult.enginesPoint(i),
 						CrawledTime:      strings.Replace(time.Now().In(loc).Format(time.RFC3339), "Z", "", -1),
 					}
-					//fmt.Println("sample->", sample)
 					sampleList = append(sampleList, sample)
-					//sampleBytes, _ := json.Marshal(sample)
-					existsID := repo.ExistsDoc(model.IndexNameSample, sample.Sha256)
-					if existsID {
-						break
-					} else {
-						//helper.Publish("virustotal-test", sampleBytes)
-						success := repo.InsertIndex(model.IndexNameSample, sample.Sha256, sample)
-						if !success {
-							return
-						}
+
+					queue := helper.NewJobQueue(runtime.NumCPU())
+					queue.Start()
+					defer queue.Stop()
+
+					for _, sample := range sampleList {
+						queue.Submit(&VirustotalProcess{
+							sample: sample,
+							iocRepo: repo,
+						})
 					}
 
 				}
@@ -248,4 +245,25 @@ func (vr VirustotalResult) enginesDetected(i int) []string {
 // Tính điểm engines
 func (vr VirustotalResult) enginesPoint(i int) int {
 	return point(vr.enginesDetected(i))
+}
+
+type VirustotalProcess struct {
+	sample   model.Sample
+	iocRepo  repository.IocRepo
+}
+
+func (process *VirustotalProcess) Process() {
+	existsSample := process.iocRepo.ExistsIndex(model.IndexNameSample)
+	if !existsSample {
+		process.iocRepo.CreateIndex(model.IndexNameSample, model.MappingSample)
+	}
+
+	existsIdSample := process.iocRepo.ExistsDoc(model.IndexNameSample, process.sample.Sha256)
+	if !existsIdSample {
+		success := process.iocRepo.InsertIndex(model.IndexNameSample, process.sample.Sha256, process.sample)
+		if !success {
+			return
+		}
+		rabbit.PublishSample("sample", process.sample)
+	}
 }

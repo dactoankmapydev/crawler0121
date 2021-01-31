@@ -13,6 +13,7 @@ import (
 )
 
 func MirrorPost(repo repository.IocRepo) {
+	loc, _ := time.LoadLocation("Europe/London")
 	compromises := make([]model.Compromised, 0)
 	c := colly.NewCollector(colly.UserAgent("Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"))
 	c.SetRequestTimeout(30 * time.Second)
@@ -33,16 +34,17 @@ func MirrorPost(repo repository.IocRepo) {
 			mirrorPost.CreationDate = convertUTCTime(rows[4])
 			mirrorPost.TimeStamp = convertTimestamp(rows[4])
 			mirrorPost.VictimHash = helper.Hash(mirrorPost.TimeStamp, mirrorPost.UID, mirrorPost.HostName)
-			mirrorPost.CrawledTime = time.Now().Format(time.RFC3339)
+			mirrorPost.CrawledTime = time.Now().In(loc).Format(time.RFC3339)
 			compromises = append(compromises, mirrorPost)
 		})
 	})
+
+
 
 	c.OnScraped(func(r *colly.Response) {
 		queue := helper.NewJobQueue(runtime.NumCPU())
 		queue.Start()
 		defer queue.Stop()
-
 		for _, compromise := range compromises {
 			queue.Submit(&MirrorProcess{
 				compromised: compromise,
@@ -55,7 +57,7 @@ func MirrorPost(repo repository.IocRepo) {
 		log.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 	})
 
-	for i := 1; i < 75187; i++ {
+	for i := 1; i <= 10; i++ {
 		fullURL := fmt.Sprintf("https://mirror-h.org/archive/page/%d", i)
 		c.Visit(fullURL)
 		fmt.Println(fullURL)
@@ -73,10 +75,9 @@ func (process *MirrorProcess) Process() {
 		process.iocRepo.CreateIndex(model.IndexNameCompromised, model.MappingCompromised)
 	}
 	existsID := process.iocRepo.ExistsDoc(model.IndexNameCompromised, process.compromised.VictimHash)
-	if existsID {
-		return
-	} else {
+	if !existsID {
 		success := process.iocRepo.InsertIndex(model.IndexNameCompromised, process.compromised.VictimHash, process.compromised)
+		fmt.Println("Add", process.compromised.VictimHash)
 		if !success {
 			return
 		}

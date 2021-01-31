@@ -82,6 +82,38 @@ func (ioc IocRepoImpl) InsertManyIndexPost(indexName string, docs []model.Post) 
 	return true
 }
 
+func (ioc IocRepoImpl) InsertManyIndexCompromised(indexName string, docs []model.Compromised) bool {
+	bulkRequest := ioc.es.Client.Bulk()
+	for _, doc := range docs {
+		req := elastic.NewBulkIndexRequest().Index(indexName).Id(doc.VictimHash).Doc(doc)
+		bulkRequest = bulkRequest.Add(req)
+	}
+	bulkResponse, err := bulkRequest.Do(context.Background())
+	if err != nil {
+		fmt.Println(err)
+	}
+	if bulkResponse != nil {
+
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) InsertManyIndexSample(indexName string, docs []model.Sample) bool {
+	bulkRequest := ioc.es.Client.Bulk()
+	for _, doc := range docs {
+		req := elastic.NewBulkIndexRequest().Index(indexName).Id(doc.Sha256).Doc(doc)
+		bulkRequest = bulkRequest.Add(req)
+	}
+	bulkResponse, err := bulkRequest.Do(context.Background())
+	if err != nil {
+		fmt.Println(err)
+	}
+	if bulkResponse != nil {
+
+	}
+	return true
+}
+
 func (ioc IocRepoImpl) ExistsDocIoc(indexName string, docs []model.Indicators) bool {
 	for _, doc := range docs {
 		exists, err := ioc.es.Client.Exists().
@@ -99,6 +131,32 @@ func (ioc IocRepoImpl) ExistsDocPost(indexName string, docs []model.Post) bool {
 	for _, doc := range docs {
 		exists, err := ioc.es.Client.Exists().
 			Index(indexName).Id(helper.Hash(doc.ID, doc.Modified)).
+			Do(context.Background())
+		if err != nil {
+			log.Println(err)
+		}
+		return exists
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) ExistsDocCompromised(indexName string, docs []model.Compromised) bool {
+	for _, doc := range docs {
+		exists, err := ioc.es.Client.Exists().
+			Index(indexName).Id(doc.VictimHash).
+			Do(context.Background())
+		if err != nil {
+			log.Println(err)
+		}
+		return exists
+	}
+	return true
+}
+
+func (ioc IocRepoImpl) ExistsDocSample(indexName string, docs []model.Sample) bool {
+	for _, doc := range docs {
+		exists, err := ioc.es.Client.Exists().
+			Index(indexName).Id(doc.Sha256).
 			Do(context.Background())
 		if err != nil {
 			log.Println(err)

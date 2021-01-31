@@ -20,10 +20,21 @@ var (
 )
 
 var backoffSchedule = []time.Duration{
-	5 * time.Second,
 	10 * time.Second,
+	15 * time.Second,
 	20 * time.Second,
+	25 * time.Second,
+	30 * time.Second,
+	35 * time.Second,
+	40 * time.Second,
+	45 * time.Second,
+	50 * time.Second,
+	55 * time.Second,
 	60 * time.Second,
+	70 * time.Second,
+	80 * time.Second,
+	90 * time.Second,
+	100 * time.Second,
 }
 
 func (c HTTPClient) GetVirustotal(api string) ([]byte, error) {
@@ -124,7 +135,7 @@ func (c HTTPClient) GetOtxWithRetries (api string) ([]byte, error){
 	return body, nil
 }
 
-func (c HTTPClient) GetMirror(pathURL string) ([]byte, error) {
+func (c HTTPClient) GetMirror(pathURL string) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", pathURL, nil)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36")
 	//proxyURL, _ := url.Parse("http://127.0.0.1:3128")
@@ -145,16 +156,18 @@ func (c HTTPClient) GetMirror(pathURL string) ([]byte, error) {
 		fmt.Sprintf("request failed: %v", respErr)
 		return nil, respErr
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return body, nil
+	//defer resp.Body.Close()
+	//body, err := ioutil.ReadAll(resp.Body)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return body, nil
+	return resp, nil
 }
 
-func (c HTTPClient) GetMirrorWithRetries (api string) ([]byte, error){
-	var body []byte
+func (c HTTPClient) GetMirrorWithRetries (api string) (*http.Response, error){
+	//var body []byte
+	var body *http.Response
 	var err error
 	for _, backoff := range backoffSchedule {
 		body, err = c.GetMirror(api)
