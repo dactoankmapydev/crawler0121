@@ -52,37 +52,37 @@ func checkError(err error) {
 	}
 }
 
-func getAllTimeModified() []int64 {
-	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=2019-01-01T00:00:00")
-	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
-	checkError(err)
-	var data Data
-	json.Unmarshal(body, &data)
-	modifiedList := make([]int64, 0)
-	for _, item := range data.Results {
-		post := model.Post {
-			Modified:          item.Modified,
-		}
-		modifiedList = append(modifiedList, utcToTimestamp(post.Modified))
-	}
-	return modifiedList
-}
-
-func getLastTimeModified(modifiedList []int64) int64 {
-	max := modifiedList[0]
-	for _, value := range modifiedList {
-		if value > max {
-			max = value
-		}
-	}
-	return max
-}
-
-func utcToTimestamp(strTime string) int64 {
-	layout := "2006-01-02T15:04:05.000000"
-	t,_ := time.Parse(layout, strTime)
-	return t.Unix()
-}
+//func getAllTimeModified() []int64 {
+//	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=2019-01-01T00:00:00")
+//	body, err := helper.HttpClient.GetOtxWithRetries(pathAPI)
+//	checkError(err)
+//	var data Data
+//	json.Unmarshal(body, &data)
+//	modifiedList := make([]int64, 0)
+//	for _, item := range data.Results {
+//		post := model.Post {
+//			Modified:          item.Modified,
+//		}
+//		modifiedList = append(modifiedList, utcToTimestamp(post.Modified))
+//	}
+//	return modifiedList
+//}
+//
+//func getLastTimeModified(modifiedList []int64) int64 {
+//	max := modifiedList[0]
+//	for _, value := range modifiedList {
+//		if value > max {
+//			max = value
+//		}
+//	}
+//	return max
+//}
+//
+//func utcToTimestamp(strTime string) int64 {
+//	layout := "2006-01-02T15:04:05.000000"
+//	t,_ := time.Parse(layout, strTime)
+//	return t.Unix()
+//}
 
 func TotalPage() int {
 	pathAPI := fmt.Sprintf("https://otx.alienvault.com/api/v1/pulses/subscribed?limit=50&modified_since=2019-01-01T00:00:00")

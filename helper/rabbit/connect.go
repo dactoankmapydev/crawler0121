@@ -22,5 +22,5 @@ func ConnectRbmq() (*amqp.Channel, error){
 
 	ch, err := conn.Channel()
 	failOnErr(err, "Failed to open a channel")
-	return ch, err
+	return ch, nil
 }

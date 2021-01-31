@@ -55,9 +55,9 @@ func main() {
 	//crawler.LiveHunting(iocHandler.IocRepo)
 
 	//crawler.Subscribed(iocHandler.IocRepo)
-	//crawler.MirrorPost(iocHandler.IocRepo)
+	crawler.Mirror(iocHandler.IocRepo)
 	//crawler.LiveHunting(iocHandler.IocRepo)
-	crawler.Subscribed(iocHandler.IocRepo)
+	//crawler.Subscribed(iocHandler.IocRepo)
 
 	// schedule crawler
 	//go schedule(1*time.Minute, iocHandler, 1)
@@ -74,8 +74,8 @@ func schedule(timeSchedule time.Duration, handler handler.IocHandler, crowIlnnde
 			switch crowIlnndex {
 			case 1:
 				<-ticker.C
-				//crawler.MirrorPost(handler.IocRepo)
-				crawler.Subscribed(handler.IocRepo)
+				crawler.Mirror(handler.IocRepo)
+				//crawler.Subscribed(handler.IocRepo)
 				//crawler.LiveHunting(handler.IocRepo)
 				fmt.Println("waiting 30s...")
 				//case 2:
