@@ -39,7 +39,7 @@ var backoffSchedule = []time.Duration{
 
 func (c HTTPClient) GetVirustotal(api string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", api, nil)
-	req.Header.Add("X-Apikey", "7d42532bd1dea1e55f7a8e99cdee23d9b26c386a6485d6dcb4106b9d055f9277")
+	req.Header.Add("X-Apikey", "")
 	//proxyURL, _ := url.Parse("http://127.0.0.1:3128")
 	//transport := http.Transport{
 	//	//Proxy: http.ProxyURL(proxyURL),
@@ -88,7 +88,7 @@ func (c HTTPClient) GetVirustotalWithRetries (api string) ([]byte, error){
 
 func (c HTTPClient) GetOtx(api string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", api, nil)
-	req.Header.Add("X-OTX-API-KEY", "779cc51038ddb07c5f6abe0832fed858a6039b9e8cdb167d3191938c1391dbba")
+	req.Header.Add("X-OTX-API-KEY", "6e101c84822e29f238f401d222c685444009e155e93355a4f339e1b1f8ffb4e4")
 	//proxyURL, _ := url.Parse("http://127.0.0.1:3128")
 	//transport := http.Transport{
 	//	Proxy: http.ProxyURL(proxyURL),
