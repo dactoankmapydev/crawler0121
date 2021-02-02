@@ -1,7 +1,7 @@
-# Crawler nguồn IOC (Indicators of Compromise)
+# Crawler nguồn IOC
 - IOCs (hashes, địa chỉ IP, tên miền…) được lấy từ các nhóm nội bộ đến các tổ chức, hoặc có thể từ đơn vị cung cấp thứ ba. Loại tìm kiếm này hầu như không chủ động nhưng lại mang về một số lợi ích trong quá trình tìm kiếm: nếu kẻ tấn công sử dụng lại cơ sở hạ tầng của phần mềm độc hại của chúng, sẽ rất dễ dàng để phát hiện ra các hoạt động độc hại ngay từ những bước đầu tiên, điều này đặc biệt đúng trong chiến dịch diện rộng, trong khi nó hiếm khi xảy ra với các mối đe doạ liên tục nâng cao (Advanced Persistent Threats) và các cuộc tấn công có chủ đích.
 
-1. Crawler nguồn subscribed từ otx (người dùng follow tác giả nào thì nguồn bài viết sẽ hiện trên tài khoản người dùng
+1. Crawler nguồn subscribed từ otx (người dùng subscribed tác giả nào thì nguồn bài viết sẽ hiện trên tài khoản người dùng
    đó)
 
 - Trong 1 bài viết cụ thể có nhiều thông tin, có danh sách indicator ở bảng cuối cùng, cần lấy danh sách indicator để
